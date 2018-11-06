@@ -1,15 +1,15 @@
 <template>
     <div id="wrapper">
-        <h1>Wrapper</h1>
         <template>
             <div>
                 <div class="searchNavigation">
                     <button v-on:click="index != 0 ? index-- : index++">◄</button>
-                    <h1>{{currentSearchName}}</h1>
+                    <h1>{{currentSearch.name}}</h1>
                     <button v-on:click="index++">►</button>
                 </div>
-
-                <component :is="currentSearch"></component>
+                <keep-alive>
+                    <component :is="currentSearch"></component>
+                </keep-alive>
             </div>
         </template>
         <button v-on:click="setListen">Listen</button>
@@ -31,15 +31,11 @@ export default {
         return {
             index: 0,
             searches: [MobileBG, CarsBG],
-            searchesNames: ['MobileBG', 'CarsBG'],
         }
     },
     computed:  {
         currentSearch: function () {
             return this.searches[this.index % this.searches.length];
-        },
-        currentSearchName: function () {
-            return this.searchesNames[this.index % this.searches.length];
         }
     },
     methods: {
@@ -71,11 +67,5 @@ export default {
         font-weight: bold;
         font-size: 30px;
     }
-}
-
-.row {
-    display: flex;
-    justify-content: space-around;
-    flex-direction: row;
 }
 </style>

@@ -6,4 +6,29 @@
     * {
         margin: auto;
     }
+
+}
+
+.row {
+    border-top: 1px solid gray;
+    margin: 5px 0px;
+    padding: 10px 0px;
+    display: flex;
+    justify-content: space-around;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+
+    border-top: 1px solid gray;
+    margin: 5px 0px;
+    padding: 10px 0px;
+}
+
+.error {
+    color:red
 }
