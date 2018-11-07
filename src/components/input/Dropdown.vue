@@ -9,11 +9,15 @@
 <script>
 export default {
     name: "Dropdown",
-    props: ['storage', 'hrefValue'],
+    props: ['storage', 'hrefValue', 'default'],
+    mounted: function() {
+        if(this.default) {
+            this.storage[this.hrefValue] = this.default;
+        }
+    },
     methods: {
         set: function(event) {
             this.storage[this.hrefValue] = event.target.value;
-            console.log(this.storage);
         }
     }
 };

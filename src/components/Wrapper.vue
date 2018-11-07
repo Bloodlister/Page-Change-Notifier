@@ -51,7 +51,7 @@ export default {
     display: flex;
     flex-direction: column;
     width: 50vw;
-    min-width: 300px;
+    min-width: 600px;
 }
 
 .searchNavigation {
