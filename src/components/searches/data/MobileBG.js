@@ -1,4 +1,18 @@
 export default {
+    brandModel: {
+        hrefValues: {
+
+        },
+        brandOptions: [
+            {
+                label: 'Audi',
+                hrefValue: 'ff',
+            },
+        ],
+        modelOptions: [
+            
+        ],
+    },
     price: {
         scopeData: {
             active: false,

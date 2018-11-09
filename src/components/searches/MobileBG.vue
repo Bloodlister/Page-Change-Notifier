@@ -6,13 +6,15 @@
             <option value="5">Motorbikes</option>
         </dropdown>
         <div class="column">
+            <brand-model :storage="storage"
+                        :brand-options="inputs.brandModel"/>
             <currency :storage="storage" :dropdownData="inputs.price.dropdownData" :scopeData="inputs.price.scopeData" />
             <between-numbers v-for="(between, index) in inputs.betweens" 
-                             v-bind:key="index"
-                             :storage="storage"
-                             :label="between.label" 
-                             :hrefValues="between.hrefValues"
-                             :extraData="between.extraData"/>
+                            v-bind:key="index"
+                            :storage="storage"
+                            :label="between.label" 
+                            :hrefValues="between.hrefValues"
+                            :extraData="between.extraData"/>
         </div>
         <div class="row">
             <checkbox v-for="(checkbox, index) in inputs.checkboxes" :key="index" 
@@ -30,6 +32,7 @@ import Currency from '../input/Currency.vue';
 import BetweenNumbers from '../input/BetweenNumbers.vue';
 import Checkbox from '../input/Checkbox.vue';
 import Inputs from './data/MobileBG.js';
+import BrandModel from '../input/BrandModel.vue';
 
 export default {
     name: 'MobileBG',
@@ -38,11 +41,12 @@ export default {
         Checkbox,
         Dropdown,
         Currency,
+        BrandModel,
     },
     methods: {
         getData: function() {
             console.log('Hello');
-        }
+        },
     },
     data: function() {
         return {
@@ -52,7 +56,7 @@ export default {
                 f21: "01", // New and Used cars
             },
             inputs: Inputs,
-        }
+        };
     },
 };
 </script>

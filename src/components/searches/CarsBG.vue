@@ -8,9 +8,9 @@
 export default {
     name: 'CarsBG',
     methods: {
-        getData: function() {
+        getData: function () {
             console.log('hasdliasbdv');
-        }
-    }
+        },
+    },
 };
 </script>
