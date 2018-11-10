@@ -7,8 +7,10 @@
         </dropdown>
         <div class="column">
             <brand-model :storage="storage"
-                        :brand-options="inputs.brandModel"/>
+                        :data="inputs.brandModel"/>
+
             <currency :storage="storage" :dropdownData="inputs.price.dropdownData" :scopeData="inputs.price.scopeData" />
+            
             <between-numbers v-for="(between, index) in inputs.betweens" 
                             v-bind:key="index"
                             :storage="storage"

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "express": "^4.16.4",
+    "nodemailer": "^4.6.8",
     "push.js": "^1.0.9",
     "vue": "^2.5.17",
     "vuex": "^3.0.1"

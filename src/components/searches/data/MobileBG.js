@@ -8,10 +8,33 @@ export default {
                 label: 'Audi',
                 hrefValue: 'ff',
             },
+            {
+                label: 'BMW',
+                hrefValue: 'fw',
+            },
         ],
-        modelOptions: [
-            
-        ],
+        modelOptions: {
+            ff: [
+                {
+                    label: 'Audi A1',
+                    hrefValue: 'aa',
+                },
+                {
+                    label: 'Audi B2',
+                    hrefValue: 'ab',
+                },
+            ],
+            fw: [
+                {
+                    label: 'BMW butt',
+                    hrefValue: 'BB',
+                },
+                {
+                    label: 'BMW iaksb',
+                    hrefValue: 'dsakjh',
+                },
+            ],
+        },
     },
     price: {
         scopeData: {
