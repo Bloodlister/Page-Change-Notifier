@@ -1,8 +1,11 @@
-module.exports = function loggedIn(req, res, next) {
-    console.log(req.session);
-    if (req.session) {
+function loggedIn(req, res, next) {
+    if ((req.path === '/login' || req.path === '/register') && !req.session.email) {
         next();
     } else {
-        res.redirect('/');
+        res.redirect('/login');
     }
+}
+
+module.exports = {
+    loggedIn: loggedIn,
 };

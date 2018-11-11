@@ -2,6 +2,7 @@
 function setRouters(app) {
     let routers = [
         require('./app/Routers/Mailer.js'),
+        require('./app/Routers/Auth.js'),
     ];
 
     routers.forEach((router) => {
