@@ -9,7 +9,9 @@
             <brand-model :storage="storage"
                         :data="inputs.brandModel"/>
 
-            <currency :storage="storage" :dropdownData="inputs.price.dropdownData" :scopeData="inputs.price.scopeData" />
+            <currency :storage="storage" 
+                    :dropdownData="inputs.price.dropdownData" 
+                    :scopeData="inputs.price.scopeData" />
             
             <between-numbers v-for="(between, index) in inputs.betweens" 
                             v-bind:key="index"
