@@ -1,7 +1,8 @@
 export default {
     brandModel: {
         hrefValues: {
-
+            brand: 'as',
+            model: 'sa',
         },
         brandOptions: [
             {
@@ -65,10 +66,6 @@ export default {
             hrefValues: {
                 min: 'f10',
                 max: 'f11',
-            },
-            extraData: {
-                min: 1990,
-                max: 2018,
             },
         },
     ],
