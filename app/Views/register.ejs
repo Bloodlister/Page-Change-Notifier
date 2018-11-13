@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Car Notifier: Login</title>
+</head>
+
+<body>
+    <form action="/register" method="POST">
+        <%if (locals.err) { %>
+        <div class="error">
+            <%= locals.err %>
+        </div>
+        <% } %>
+        Email: <input type="text" name="email"><br>
+        Username: <input type="text" name="username"><br>
+        Password: <input type="password" name="password"><br>
+        Confirm Password: <input type="password" name="passwordConf"><br>
+        <button type="submit">Register</button>
+    </form>
+    <a href="/login">Login</a>
+</body>
+
+</html>

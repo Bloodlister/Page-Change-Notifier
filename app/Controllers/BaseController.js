@@ -1,10 +1,12 @@
+const path = require('path');
+
 class BaseController {
     static index(req, res) {
-        res.sendFile('/dist/index.html');
+        res.sendFile(path.resolve('dist/index.html'));
     }
 
     static test(req, res) {
-        res.send('asdasd');
+        console.log(req.session);
     }
 }
 
