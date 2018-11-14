@@ -34,13 +34,16 @@ export default {
         }
     },
     methods: {
-        setBrand(event) {
+        setBrand: function(event) {
             this.storage[this.data.hrefValues.brand] = event.target.value;
             this.storage[this.data.hrefValues.model] = '';
         },
-        setModel(event) {
+        setModel: function	(event) {
             this.storage[this.data.hrefValues.model] = event.target.value;
         },
+    },
+    mounted: function() {
+        console.log(this.storage)
     }
 }
 </script>

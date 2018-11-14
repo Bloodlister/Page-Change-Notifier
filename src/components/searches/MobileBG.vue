@@ -1,30 +1,26 @@
 <template>
     <div class="search">
-        <dropdown default="1" hrefValue="topmenu" :storage="storage">
-            <option value="1">Cars and Jeeps</option>
-            <option value="3">Buses</option>
-            <option value="5">Motorbikes</option>
-        </dropdown>
-        <div class="column">
+        <div class="row">
+            <dropdown default="1" hrefValue="topmenu" :storage="storage">
+                <option v-for="(option, index) in this.inputs.topmenu" :key="index" 
+                    :value="option.hrefValue">{{ option.label }}</option>
+            </dropdown>
+
             <brand-model :storage="storage"
-                        :data="inputs.brandModel"/>
+                    :data="this.inputs.brandOptions[this.storage.topmenu]"/>
+        </div>
+        <div class="column">
 
             <currency :storage="storage" 
                     :dropdownData="inputs.price.dropdownData" 
                     :scopeData="inputs.price.scopeData" />
-            
+
             <between-numbers v-for="(between, index) in inputs.betweens" 
                             v-bind:key="index"
                             :storage="storage"
                             :label="between.label" 
                             :hrefValues="between.hrefValues"
                             :extraData="between.extraData"/>
-        </div>
-        <div class="row">
-            <checkbox v-for="(checkbox, index) in inputs.checkboxes" :key="index" 
-                        :label="checkbox.label"
-                        :storage="storage"
-                        :hrefValue="checkbox.hrefValue"/>
         </div>
     </div>
 </template>
@@ -62,5 +58,8 @@ export default {
             inputs: Inputs,
         };
     },
+    mounted: function() {
+        console.log(this.storage);
+    }
 };
 </script>

@@ -1,41 +1,57 @@
 export default {
-    brandModel: {
-        hrefValues: {
-            brand: 'as',
-            model: 'sa',
+    topmenu: [
+        {
+            hrefValue: 1,
+            label: "Cars and Jeeps",
         },
-        brandOptions: [
-            {
-                label: 'Audi',
-                hrefValue: 'ff',
+        {
+            hrefValue: 3,
+            label: "Buses",
+        },
+        {
+            hrefValue: 5,
+            label: "Motorbikes"
+        }
+    ],
+    brandOptions: {
+        1: {
+            hrefValues: {
+                brand: 'as',
+                model: 'sa',
             },
-            {
-                label: 'BMW',
-                hrefValue: 'fw',
-            },
-        ],
-        modelOptions: {
-            ff: [
+            brandOptions: [
                 {
-                    label: 'Audi A1',
-                    hrefValue: 'aa',
+                    label: 'Audi',
+                    hrefValue: 'ff',
                 },
                 {
-                    label: 'Audi B2',
-                    hrefValue: 'ab',
+                    label: 'BMW',
+                    hrefValue: 'fw',
                 },
             ],
-            fw: [
-                {
-                    label: 'BMW butt',
-                    hrefValue: 'BB',
-                },
-                {
-                    label: 'BMW iaksb',
-                    hrefValue: 'dsakjh',
-                },
-            ],
-        },
+            modelOptions: {
+                ff: [
+                    {
+                        label: 'Audi A1',
+                        hrefValue: 'aa',
+                    },
+                    {
+                        label: 'Audi B2',
+                        hrefValue: 'ab',
+                    },
+                ],
+                fw: [
+                    {
+                        label: 'BMW butt',
+                        hrefValue: 'BB',
+                    },
+                    {
+                        label: 'BMW iaksb',
+                        hrefValue: 'dsakjh',
+                    },
+                ],
+            },
+        }
     },
     price: {
         scopeData: {
@@ -70,9 +86,9 @@ export default {
         },
     ],
     checkboxes: [
-        {
-            hrefValue: 'f22',
-            label: 'Has Pictures',
-        },
+        // {
+        //     hrefValue: 'f22',
+        //     label: 'Has Pictures',
+        // },
     ],
 };
