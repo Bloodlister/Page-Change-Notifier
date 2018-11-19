@@ -8,11 +8,11 @@
                     <button v-on:click="index++">►</button>
                 </div>
                 <keep-alive>
-                    <component :is="currentSearch"></component>
+                    <component :is="currentSearch" v-on:passData="createListen"></component>
                 </keep-alive>
             </div>
         </template>
-        <button v-on:click="setListen">Listen</button>
+        
     </div>
 </template>
 
@@ -39,10 +39,10 @@ export default {
         }
     },
     methods: {
-        setListen: function () {
-            console.log('Saved');
-        },
-    },
+        createListen: function(data) {
+            console.log('create Listen');
+        }
+    }
 };
 </script>
 

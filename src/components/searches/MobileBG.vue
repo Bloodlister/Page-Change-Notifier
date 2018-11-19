@@ -22,6 +22,7 @@
                             :hrefValues="between.hrefValues"
                             :extraData="between.extraData"/>
         </div>
+        <button v-on:click="passToParent">Listen</button>
     </div>
 </template>
 
@@ -44,8 +45,8 @@ export default {
         BrandModel,
     },
     methods: {
-        getData: function() {
-            console.log('Hello');
+        passToParent: function() {
+            this.$emit('passData', this.storage);
         },
     },
     data: function() {
@@ -58,8 +59,5 @@ export default {
             inputs: Inputs,
         };
     },
-    mounted: function() {
-        console.log(this.storage);
-    }
 };
 </script>

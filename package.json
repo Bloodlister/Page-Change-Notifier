@@ -9,6 +9,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "bcrypt": "^3.0.2",
     "body-parser": "^1.18.3",
     "connect-mongo": "^2.0.1",
@@ -18,8 +19,8 @@
     "express-session": "^1.15.6",
     "mongoose": "^5.3.11",
     "nodemailer": "^4.6.8",
-    "push.js": "^1.0.9",
     "vue": "^2.5.17",
+    "vue-axios": "^2.1.4",
     "vuex": "^3.0.1"
   },
   "devDependencies": {
