@@ -7,7 +7,7 @@
             </dropdown>
 
             <brand-model :storage="storage"
-                    :data="this.inputs.brandOptions[this.storage.topmenu]"/>
+                    :data="this.inputs.brandOptions"/>
         </div>
         <div class="column">
 
