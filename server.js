@@ -7,11 +7,9 @@ const MongoStore = require('connect-mongo')(session);
 
 const Routing = require('./routing.js');
 const Middleware = require('./middleware.js');
-const MongoStoreOptions = require('./storeoptions.js');
-
-console.log(process.env.CONNECTION_STRING);
 
 if (!process.env.CONNECTION_STRING) {
+    const MongoStoreOptions = require('./storeoptions.js');
     mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
 } else {
     mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
