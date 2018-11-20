@@ -6,7 +6,7 @@ class BaseController {
     }
 
     static test(req, res) {
-        res.send('Working!');
+        res.render('./../Views/test.ejs');
     }
 }
 

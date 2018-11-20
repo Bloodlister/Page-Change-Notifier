@@ -1,12 +1,12 @@
 <template>
     <div class="input">
-        <input type="checkbox" v-model="active" @change="activate">
-        <p class="inputLable">{{label}}:</p>
-        <div class="number-input">
-            Min <input :disabled="!active" type="number" min="0" placeholder="0" v-model="min_value" @input="validateValue(); save()">
+        <div>
+            {{label}}:&nbsp;
+            Min <input type="number" min="0" placeholder="0" v-model="min_value" @input="validateValue(); save()">
             -
-            Max <input :disabled="!active" type="number" min="0" placeholder="0" v-model="max_value" @input="validateValue(); save()">
+            Max <input type="number" min="0" placeholder="0" v-model="max_value" @input="validateValue(); save()">
             <p v-if="error" class="error">Minimum value is bigger than maximum</p>
+
         </div>
     </div>
 </template>
@@ -18,7 +18,6 @@ export default {
     props: ['storage', 'label', 'hrefValues', 'extraData'],
     data: function () {
         return {
-            active: false,
             min_value: '',
             max_value: '',
             error: false,

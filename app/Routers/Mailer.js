@@ -5,6 +5,6 @@ router.expressUrlPath = '/';
 
 router.get('/testEmail', loggedIn, (req, res) => { MailerController.testMail(req, res) });
 
-router.get('/test', loggedIn, (req, res) => { MailerController.test(req, res) });
+// router.get('/test', loggedIn, (req, res) => { MailerController.test(req, res) });
 
 module.exports = router;
