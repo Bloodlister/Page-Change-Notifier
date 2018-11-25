@@ -25,12 +25,13 @@ const UserSchema = new mongoose.Schema({
 
 UserSchema.pre('save', function(next) {
     const user = this;
+
     bcrypt.hash(user.password, 10, function(err, hash) {
         if (err) {
             return next(err);
         }
         user.password = hash;
-        user.passwordCong = hash;
+        user.passwordConf = hash;
         next();
     })
 });
@@ -58,3 +59,5 @@ UserSchema.statics.authenticate = function(email, password, callback) {
 
 const User = mongoose.model('User', UserSchema);
 module.exports = User;
+
+

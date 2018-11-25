@@ -42,8 +42,6 @@ export default {
             this.storage[this.data.hrefValues.model] = event.target.value;
         },
     },
-    mounted: function() {
-        console.log(this.storage)
-    }
+    mounted: function() {}
 }
 </script>

@@ -46,16 +46,16 @@ export default {
     },
     methods: {
         passToParent: function() {
-            this.$emit('passData', this.storage);
+            this.$emit('passData', {
+                listeningType: "MobileBG",
+                data: this.storage
+            });
         },
     },
     data: function() {
         return {
             target: "https://www.mobile.bg/pcgi/mobile.cgi",
-            storage: {
-                f20: "6", // Price
-                f21: "01", // New and Used cars
-            },
+            storage: Inputs.requiredFields,
             inputs: Inputs,
         };
     },

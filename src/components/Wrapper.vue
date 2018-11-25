@@ -40,7 +40,13 @@ export default {
     },
     methods: {
         createListen: function(data) {
-            console.log('create Listen');
+            this.$http.post('/listening/create', data)
+            .then(resp => {
+                console.log(resp);
+            })
+            .catch(err => {
+                console.log(err);
+            })
         }
     }
 };

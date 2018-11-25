@@ -1,4 +1,4 @@
-const User = require('../Models/User.js');
+const User = require('../MongooseModels/User.js');
 
 class AuthController {
     static login(req, res) {
