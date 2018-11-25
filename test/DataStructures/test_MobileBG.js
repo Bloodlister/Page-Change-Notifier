@@ -75,7 +75,7 @@ describe('it should get all car information from given html', function() {
     });
 
     it("gets the link for the car ad", function() {
-        assert.equal(Reducer.link, 'www.mobile.bg/pcgi/mobile.cgi?act=4&adv=11543164897547470&slink=8w1id2');
+        assert.equal(Reducer.link, 'www.mobile.bg/pcgi/mobile.cgi?act=4&adv=11543164897547470');
     });
 
     it("get the price for the car", function() {

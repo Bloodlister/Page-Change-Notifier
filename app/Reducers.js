@@ -59,6 +59,8 @@ class MobileBG extends Reducer {
         if (this.link.startsWith('//')) {
             this.link = this.link.substr(2);
         }
+        let regex = /&slink=[^&]*/gi;
+	this.link = this.link.replace(regex, '');
     }
 
     setPrice() {
