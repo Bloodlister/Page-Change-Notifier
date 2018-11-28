@@ -2,11 +2,11 @@ const {JSDOM} = require('jsdom');
 
 class Reducer {
     constructor(html) {
-        this.title = '';
-        this.desc = '';
-        this.image = '';
-        this.link = '';
-        this.price = '';
+        this.title = null;
+        this.desc = null;
+        this.image = null;
+        this.link = null;
+        this.price = null;
 
         this.dom = new JSDOM(html);
         this.setTitle();
@@ -39,32 +39,51 @@ class Reducer {
 
 class MobileBG extends Reducer {
     setTitle() {
-        this.title = this.dom.window.document.querySelector('.mmm').textContent;
+        let elem = this.dom.window.document.querySelector('.mmm');
+        if (elem) {
+            this.title = elem.textContent;
+        }
     }
 
     setDescription() {
-        this.desc = this.dom.window.document.querySelector('[colspan="4"]').innerHTML;
-        this.desc = this.desc.trim();
+        let elem = this.dom.window.document.querySelector('[colspan="4"]');
+        if (elem) {
+            this.desc = elem.innerHTML;
+            this.desc = this.desc.trim();
+        }
     }
 
     setImage() {
-        this.image = this.dom.window.document.querySelector('img').getAttribute('src');
-        if (this.image.startsWith('//')) {
-            this.image = this.image.substr(2);
+        let elem = this.dom.window.document.querySelector('img[data-geo]');
+
+        if (elem) {
+            this.image = elem.getAttribute('src');
+            if (this.image.startsWith('//')) {
+                this.image = this.image.substr(2);
+            }
         }
     }
 
     setLink() {
-        this.link = this.dom.window.document.querySelector('.mmm').getAttribute('href');
-        if (this.link.startsWith('//')) {
-            this.link = this.link.substr(2);
+        let elem = this.dom.window.document.querySelector('.mmm');
+
+        if (elem) {
+            this.link = elem.getAttribute('href');
+            if (this.link.startsWith('//')) {
+                this.link = this.link.substr(2);
+            }
+            let regex = /&slink=[^&]*/gi;
+    
+            this.link = this.link.replace(regex, '');
         }
-        let regex = /&slink=[^&]*/gi;
-	this.link = this.link.replace(regex, '');
+
     }
 
     setPrice() {
-        this.price = this.dom.window.document.querySelector('.price').innerHTML;
+        let elem = this.dom.window.document.querySelector('.price');
+        if (elem) {
+            this.price = this.dom.window.document.querySelector('.price').innerHTML;
+        }
     }
 }
 
