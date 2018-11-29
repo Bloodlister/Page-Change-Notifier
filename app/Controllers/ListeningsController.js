@@ -17,7 +17,13 @@ class ListeningsController {
             if (err) {
                 res.status(500).send('fail');
             } else {
-                Listening.create(req.body, (err, listening) => {
+                let listeningData = {
+                    userId: req.session.user_id,
+                    listeningType: req.body.listeningType,
+                    searchParams: req.body.data,
+                };
+
+                Listening.create(listeningData, (err, listening) => {
                     if(err) {
                         res.status(500).send('fail');
                     } else {

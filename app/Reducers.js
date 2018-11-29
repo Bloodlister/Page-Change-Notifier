@@ -38,6 +38,12 @@ class Reducer {
 }
 
 class MobileBG extends Reducer {
+    constructor(html) {
+        super(html);
+        this.isTopOffer = false;
+        this.setTopOffer();
+    }
+
     setTitle() {
         let elem = this.dom.window.document.querySelector('.mmm');
         if (elem) {
@@ -46,10 +52,16 @@ class MobileBG extends Reducer {
     }
 
     setDescription() {
-        let elem = this.dom.window.document.querySelector('[colspan="4"]');
+        let elem = this.dom.window.document.querySelector('tbody');
+        if(elem) {
+            elem = elem.querySelectorAll('tr')[3];
+            if (elem) {
+                elem = elem.querySelector('td');
+            }
+        }
+
         if (elem) {
-            this.desc = elem.innerHTML;
-            this.desc = this.desc.trim();
+            this.desc = elem.innerHTML.trim();
         }
     }
 
@@ -83,6 +95,14 @@ class MobileBG extends Reducer {
         let elem = this.dom.window.document.querySelector('.price');
         if (elem) {
             this.price = this.dom.window.document.querySelector('.price').innerHTML;
+        }
+    }
+
+    setTopOffer() {
+        let elem = this.dom.window.document.querySelector('img[alt="top"]');
+
+        if (elem) {
+            this.isTopOffer = true;
         }
     }
 }

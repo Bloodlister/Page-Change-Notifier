@@ -39,12 +39,12 @@ const dataToSend = {
 
 const collector = new MobileBGCollector(dataToSend);
 describe('Getting results from MobileBG', function() {
+    let slink;
     describe('test one', () => {
         it('Calls the MobileBG search and gets the correct setCookie', (done) => {
             collector.getRedirect(dataToSend).then((res) => {
                 assert.strictEqual(typeof res, 'string');
-
-                collector.slink = res;
+                slink = res;
                 done();
             })
         });
@@ -53,7 +53,7 @@ describe('Getting results from MobileBG', function() {
     let results = '';
     describe('test two', () => {
         it('Gets the result from the slink', (done) => {
-            collector.getResultFromSetCookie(1).then(res => {
+            collector.getResultFromSetCookie(slink, 1).then(res => {
                 assert.strictEqual(typeof res.data, 'string');
                 assert.strictEqual(res.data.startsWith('<!DOCTYPE'), true);
                 results = res.data;
@@ -77,7 +77,7 @@ describe('Getting results from MobileBG', function() {
             assert.strictEqual(typeof testCar.title, 'string');
             assert.strictEqual(testCar.title.length > 0, true);
             assert.strictEqual(testCar.image.endsWith('pic'), true);
+            assert.strictEqual(testCar.isTopOffer, true);
         });
     });
-
 });
