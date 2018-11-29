@@ -40,8 +40,8 @@ const dataToSend = {
 const collector = new MobileBGCollector(dataToSend);
 describe('Getting results from MobileBG', function() {
     let slink;
-    describe('test one', () => {
-        it('Calls the MobileBG search and gets the correct setCookie', (done) => {
+    describe('Calls the MobileBG search and gets the correct setCookie', () => {
+        it('test', (done) => {
             collector.getRedirect(dataToSend).then((res) => {
                 assert.strictEqual(typeof res, 'string');
                 slink = res;
@@ -51,8 +51,8 @@ describe('Getting results from MobileBG', function() {
     });
 
     let results = '';
-    describe('test two', () => {
-        it('Gets the result from the slink', (done) => {
+    describe('Gets the result from the slink', () => {
+        it('test', (done) => {
             collector.getResultFromSetCookie(slink, 1).then(res => {
                 assert.strictEqual(typeof res.data, 'string');
                 assert.strictEqual(res.data.startsWith('<!DOCTYPE'), true);
@@ -63,15 +63,15 @@ describe('Getting results from MobileBG', function() {
     });
 
     let carsTable;
-    describe('test three', () => {
-        it('Gets the table containing all the car results', () => {
-            carsTable = collector.getTableOfCarsFromResults(results);
-            assert.strictEqual(carsTable.querySelectorAll('table').length > 5, true);
+    describe('Gets the table containing all the car results', () => {
+        it('test', () => {
+            carsTable = collector.getCarTablesFromHTML(results);
+            assert.strictEqual(carsTable.length > 5, true);
         });
     });
 
-    describe('test four', () => {
-        it('Returns collection of all the cars', () => {
+    describe('Returns collection of all the cars', () => {
+        it('test', () => {
             carObjects = collector.getCarObjects(carsTable);
             let testCar = carObjects[0];
             assert.strictEqual(typeof testCar.title, 'string');

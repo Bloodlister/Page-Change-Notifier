@@ -1,5 +1,7 @@
 const ListenerVerifierFactory = require('./../ListenerVerifier');
 const Listening = require('./../MongooseModels/Listening.js');
+const MobileBgCollector = require('./../Collectors.js').MobileBG;
+const MobileBgCollection = require('./../Collectors.js').MobileBGCarCollection;
 
 class ListeningsController {
     //Display all listings
@@ -27,7 +29,20 @@ class ListeningsController {
                     if(err) {
                         res.status(500).send('fail');
                     } else {
-                        res.status(200).send('success');
+                        let collector = new MobileBgCollector();
+                        collector.getCurrentCars(listening.searchParams, {
+                            page: 1,
+                            cars: new MobileBgCollection(20),
+                        }).then(result => {
+                            listening.shownCars = result.cars.getCarLinks();
+                            listening.save((err, updatedListening) => {
+                                if (err) {
+                                    res.status(500).send('fail');
+                                } else {
+                                    res.status(200).send('success');
+                                }
+                            })
+                        })
                     }
                 })
             }

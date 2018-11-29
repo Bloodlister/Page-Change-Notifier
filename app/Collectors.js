@@ -5,7 +5,7 @@ const mobileBgReducer = require('./Reducers.js').MobileBG;
 
 class MobileBG {
 
-    getRedirect(requestData) {
+    async getRedirect(requestData) {
         return new Promise((resolve, reject) => {
             axios({
                 method: "post",
@@ -49,6 +49,10 @@ class MobileBG {
         });
     }
 
+    /**
+     * @param {String} html 
+     * @returns {HTMLTableElement}
+     */
     getCarTablesFromHTML(html) {
         let form = new JSDOM(html).window.document.querySelectorAll('form[name="search"]')[0];
 
@@ -62,6 +66,9 @@ class MobileBG {
         return carTables;
     }
 
+    /**
+     * @param {HTMLTableElement[]} carTables 
+     */
     getCarObjects(carTables) {
         let cars = [];
         carTables.forEach(htmlTable => {
@@ -75,43 +82,155 @@ class MobileBG {
         return cars;
     }
 
-    searchForNewCars(requestData, data) {
-        return new Promise((resolve, reject) => {
-            if (data.done || data.oldCars >= 5 || data.oldTopCars >= 5) {
-                resolve(data);
-            } else {
-                this.getRedirect(requestData)
-                .then(slink => {
-                    this.getResultFromSetCookie(slink, data.page)
-                    .then(resultPage => {
-                        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultPage.data));
+    /**
+     * @param  {Object} requestData
+     * @param  {Object} data
+     * @param  {Number} data.page
+     * @param  {Boolean} data.done
+     * @param  {MobileBGCarCollection} data.cars
+     */
+    async getCurrentCars(requestData, data) {
+        if (data.cars.limitReached()) {
+            return data;
+        }
+        
+        if (!data.slink) {
+            data.slink = await this.getRedirect(requestData);
+        }
+        
+        let resultsPage = await this.getResultFromSetCookie(data.slink, data.page);
+        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
 
-                        //If there are records store them
-                        if (cars.length > 0) {
-                            cars.forEach(car => {
-                                if(data.shownCars.indexOf(car.link) === -1) {
-                                    data.newCars.push(car);
-                                } else {
-                                    if (car.isTopOffer) {
-                                        data.oldTopCars++;
-                                    } else {
-                                        data.oldCars++;
-                                    }
-                                }
-                            });
-                        } else {
-                            data.done = true;
-                        }
+        //If there are records store them
+        if (cars.length > 0) {
+            cars.forEach(car => {
+                data.cars.addCar(car);
+            });
+            data.page += 1;
+            return this.getCurrentCars(requestData, data);
+        } else {
+            return data;
+        }
+    }
 
-                        data.page += 1;
-                        resolve(this.searchForNewCars(requestData, data));
-                    })
-                });
+    /**
+     * @param  {Object} requestData
+     * @param  {Object} data
+     * @param  {Number} data.page
+     * @param  {Boolean} data.done
+     * @param  {MobileBGCarCollection} data.cars
+     */
+    async getNewCars(requestData, data) {
+        if (data.seen > 5) {
+            return data;
+        }
+
+        if (!data.slink) {
+            data.slink = await this.getRedirect(requestData);
+        }
+
+        let resultsPage = await this.getResultFromSetCookie(data.slink, data.page);
+        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
+
+        //If there are records store them
+        if (cars.length > 0) {
+            cars.forEach(car => {
+                if (data.shownCars.indexOf(car.link) === -1) {
+                    data.cars.addNewCar(car);
+                } else {
+                    if(!car.isTopOffer && data.seen <= 5) {
+                        data.seen += 1;
+                    } else if (data.seen > 5) {
+                        return data;
+                    }
+                }
+            });
+            data.page += 1;
+            return this.getCurrentCars(requestData, data);
+        } else {
+            return data;
+        }
+    }
+}
+
+class MobileBGCarCollection {
+    /**
+     * @param  {Number} carLimit=-1 "-1" for no limit anything else for a limit
+     */
+    constructor(carLimit = -1) {
+        this.carLimit = carLimit;
+        this.newCars = [];
+        this.topCars = [];
+        this.cars = [];
+    }
+
+    /**
+     * @param  {MobileBG} car
+     */
+    addCar(car) {
+        if (car.isTopOffer) {
+            if (this.carLimit === -1 || this.topCars.length <= this.carLimit) {
+                this.topCars.push(car);
             }
+        } else {
+            if (this.carLimit === -1 || this.cars.length <= this.carLimit) {
+                this.cars.push(car);
+            }
+        }
+    }
+
+    addNewCar(car) {
+        if (this.carLimit === -1 || this.newCars.length <= this.carLimit) {
+            this.newCars.push(car);
+        }
+    }
+
+    newCarLimitReacher() {
+        if (this.newCars.length >= this.carLimit * 2) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @returns {Boolean}
+     */
+    limitReached() {
+        if(this.cars.length >= this.carLimit) {
+            return true;
+        }
+
+        return false;
+    }
+
+    getCarLinks() {
+        let links = [];
+
+        this.topCars.forEach(car => {
+            links.push(car.link);
         });
+        this.cars.forEach(car => {
+            links.push(car.link);
+        });
+
+        return links;
+    }
+
+    /**
+     * @returns {Array}
+     */
+    getNewCarLinks() {
+        let links = [];
+
+        this.newCars.forEach(car => {
+            links.push(car.link)
+        })
+
+        return links;
     }
 }
 
 module.exports = {
-    MobileBG: MobileBG
+    MobileBG: MobileBG,
+    MobileBGCarCollection: MobileBGCarCollection,
 };

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 if (!process.env.CONNECTION_STRING) {
-    const MongoStoreOptions = require('./storeoptions.js');
+    const MongoStoreOptions = require('./settings.js');
     mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
 } else {
     mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
@@ -10,6 +10,8 @@ if (!process.env.CONNECTION_STRING) {
 const UserCollection = require('./app/MongooseModels/User.js');
 const ListeningCollection = require('./app/MongooseModels/Listening.js');
 const MobileBGCollection = require('./app/Collectors.js').MobileBG;
+const Collection = require('./app/Collectors.js').MobileBGCarCollection;
+const Mailer = require('./app/Mailing.js').MobileBG;
 
 setInterval(() => {
     UserCollection.find({}, (err, users) => {
@@ -17,17 +19,17 @@ setInterval(() => {
             ListeningCollection.find({userId: user._id}, (err, Listenings) => {
                 let newCars = [];
                 let collection = new MobileBGCollection();
+                let data = {}
                 Listenings.forEach(listening => {
-                    let data = {
+                    data = {
                         page:1,
                         shownCars: listening.shownCars,
-                        newCars: [],
-                        oldTopCars: 0,
-                        oldCars: 0,
+                        seen: 0,
+                        cars: new Collection(),
                     };
 
-                    collection.searchF  orNewCars(listening.searchParams, data).then(result => {
-                        console.log("result: ", result);
+                    collection.getNewCars(listening.searchParams, data).then(({cars}) => {
+                        Mailer.notifyForNewCars(user.email, cars);
                     });
                 });
             });
