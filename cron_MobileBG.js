@@ -18,9 +18,16 @@ setInterval(() => {
                 let newCars = [];
                 let collection = new MobileBGCollection();
                 Listenings.forEach(listening => {
-                    
-                    collection.searchForNewCars(listening.searchParams, listening.shownCars).then(result => {
-                        console.log(result);
+                    let data = {
+                        page:1,
+                        shownCars: listening.shownCars,
+                        newCars: [],
+                        oldTopCars: 0,
+                        oldCars: 0,
+                    };
+
+                    collection.searchF  orNewCars(listening.searchParams, data).then(result => {
+                        console.log("result: ", result);
                     });
                 });
             });

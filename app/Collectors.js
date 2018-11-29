@@ -75,25 +75,39 @@ class MobileBG {
         return cars;
     }
 
-    searchForNewCars(requestData, shownCars) {
+    searchForNewCars(requestData, data) {
         return new Promise((resolve, reject) => {
-            let carsFromResults = [];
-            this.getRedirect(requestData)
-            .then(slink => {    
-                let page = 1;
-                this.getResultFromSetCookie(slink, page)
-                .then(resultPage => {
-                    let cars = this.getCarObjects(this.getCarTablesFromHTML(resultPage.data));
+            if (data.done || data.oldCars >= 5 || data.oldTopCars >= 5) {
+                resolve(data);
+            } else {
+                this.getRedirect(requestData)
+                .then(slink => {
+                    this.getResultFromSetCookie(slink, data.page)
+                    .then(resultPage => {
+                        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultPage.data));
 
-                    cars.forEach(car => {
-                        if(shownCars.indexOf(car.link) !== -1) {
-                            carsFromResults.push(car);
+                        //If there are records store them
+                        if (cars.length > 0) {
+                            cars.forEach(car => {
+                                if(data.shownCars.indexOf(car.link) === -1) {
+                                    data.newCars.push(car);
+                                } else {
+                                    if (car.isTopOffer) {
+                                        data.oldTopCars++;
+                                    } else {
+                                        data.oldCars++;
+                                    }
+                                }
+                            });
+                        } else {
+                            data.done = true;
                         }
-                    });
 
-                    resolve(cars);
-                })
-            });
+                        data.page += 1;
+                        resolve(this.searchForNewCars(requestData, data));
+                    })
+                });
+            }
         });
     }
 }
