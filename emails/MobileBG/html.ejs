@@ -1,0 +1,23 @@
+<link href="/assets/mailing.css" rel="stylesheet" data-inline>
+<div class="car-collection">
+    <% cars.forEach(function(car) { %>
+    <div class="car">
+        <div class="image">
+            <a href="<%= car.link %>">
+                <div class="car-image" style="background-image: url('<%= car.image %>')"></div>
+            </a>
+        </div>
+        <div class="desc">
+            <div class="car-title">
+                <a href="<%= car.link %>"><%= car.title %></a>
+            </div>
+            <div class="car-desc">
+                <%= car.desc %>
+            </div>
+            <div class="car-price">
+                <%= car.price %>
+            </div>
+        </div>
+    </div>
+    <% }); %>
+</div>

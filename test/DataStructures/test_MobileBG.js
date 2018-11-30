@@ -1,8 +1,7 @@
 const assert = require('assert');
 
 let MobileBGCarExampleHTML = `
-            
-      <table class="tablereset" style="width:660px; margin-bottom:0px; border-top:#008FC6 1px solid; background:url(//www.mobile.bg/images/picturess/vip_bg.gif); background-position:bottom; background-repeat:repeat-x;">
+      <table class="tablereset">
         <tbody><tr>
           <td style="width:150px;height:10px;"></td>
           <td style="width:232px;height:10px;"></td>

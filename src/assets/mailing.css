@@ -1,0 +1,61 @@
+
+
+.car-collection {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.car {
+    border: 1px solid black;
+    margin: 10px 0px;
+    padding: 0px 5px;
+
+    display: flex;
+    flex-direction: row;
+    width: 98%;
+    height: 175px;
+}
+
+.car .image {
+    display: block;
+    width: 40%;
+    margin: auto 5px;
+}
+
+.car-image {
+    display: block;
+    width: 100%;
+    height: 180px;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.car .desc {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    margin: auto 0;
+    padding: 10px;
+    height: 140px;
+    width: 100%;
+    border: 1px solid black;
+}
+
+.car-title {
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 26px;
+    border-bottom: 1px solid black;
+}
+
+.car-title a, .car-title a:active {
+    color:black;
+    text-decoration: none;
+}
+
+.car-price {
+    font-size: 18px;
+    margin-top: auto;
+}
