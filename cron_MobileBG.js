@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+const Mailer = require('./app/Mailing.js').MobileBG;
+const UserCollection = require('./app/MongooseModels/User.js');
+const ListeningCollection = require('./app/MongooseModels/Listening.js');
 
 if (!process.env.CONNECTION_STRING) {
     const MongoStoreOptions = require('./settings.js');
@@ -7,32 +10,21 @@ if (!process.env.CONNECTION_STRING) {
     mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
 }
 
-const UserCollection = require('./app/MongooseModels/User.js');
-const ListeningCollection = require('./app/MongooseModels/Listening.js');
-const MobileBGCollection = require('./app/Collectors.js').MobileBG;
-const Collection = require('./app/Collectors.js').MobileBGCarCollection;
-const Mailer = require('./app/Mailing.js').MobileBG;
-
 setInterval(() => {
     UserCollection.find({}, (err, users) => {
         users.forEach(user => {
-            ListeningCollection.find({userId: user._id}, (err, Listenings) => {
-                let newCars = [];
-                let collection = new MobileBGCollection();
-                let data = {}
-                Listenings.forEach(listening => {
-                    data = {
-                        page:1,
-                        shownCars: listening.shownCars,
-                        seen: 0,
-                        cars: new Collection(),
-                    };
-
-                    collection.getNewCars(listening.searchParams, data).then(({cars}) => {
-                        Mailer.notifyForNewCars(user.email, cars);
-                    });
-                });
+            ListeningCollection.find({userId: user._id}, async (err, Listenings) => {
+                if (Listenings.length > 0) {
+                    let newCars = await ListeningCollection.getNewCarsFromListenings(Listenings);
+                    
+                    if (newCars && newCars.length > 0) {
+                        let userMailer = new Mailer(user.email);
+                        userMailer.getTemplateForNewCars(newCars).then(template => {
+                            userMailer.sendMail(template);
+                        });
+                    }
+                }
             });
         });      
     });
-}, 1000);
+}, 5000);

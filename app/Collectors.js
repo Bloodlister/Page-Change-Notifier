@@ -39,6 +39,11 @@ class MobileBG {
             axios({
                 method: "get",
                 url: 'https://www.mobile.bg/pcgi/mobile.cgi?act=3&f1=' + page + '&slink=' + slink,
+                headers: {
+                    'DNT': '1'
+                },
+                responseType: 'arraybuffer',
+                responseEncoding: 'binary'
             })
             .then(resp => {
                 resolve(resp);
@@ -134,6 +139,7 @@ class MobileBG {
 
         //If there are records store them
         if (cars.length > 0) {
+            console.log(cars);
             cars.forEach(car => {
                 if (data.shownCars.indexOf(car.link) === -1) {
                     data.cars.addNewCar(car);

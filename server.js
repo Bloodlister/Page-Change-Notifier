@@ -10,7 +10,7 @@ const Routing = require('./routing.js');
 const Middleware = require('./middleware.js');
 
 if (!process.env.CONNECTION_STRING) {
-    const MongoStoreOptions = require('./storeoptions.js');
+    const MongoStoreOptions = require('./settings.js');
     mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
 } else {
     mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
