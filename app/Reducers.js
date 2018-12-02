@@ -61,7 +61,8 @@ class MobileBG extends Reducer {
         }
 
         if (elem) {
-            this.desc = elem.innerHTML.trim();
+            this.desc = elem.innerHTML.trim();  
+            this.desc = this.desc.replace(/<br>/g, '');
         }
     }
 
@@ -73,6 +74,8 @@ class MobileBG extends Reducer {
             if (this.image.startsWith('//')) {
                 this.image = this.image.substr(2);
             }
+
+            this.image = 'https://' + this.image;
         }
     }
 

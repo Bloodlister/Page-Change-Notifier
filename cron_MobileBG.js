@@ -16,7 +16,7 @@ setInterval(() => {
             ListeningCollection.find({userId: user._id}, async (err, Listenings) => {
                 if (Listenings.length > 0) {
                     let newCars = await ListeningCollection.getNewCarsFromListenings(Listenings);
-                    
+                    console.log(newCars);
                     if (newCars && newCars.length > 0) {
                         let userMailer = new Mailer(user.email);
                         userMailer.getTemplateForNewCars(newCars).then(template => {
@@ -27,4 +27,4 @@ setInterval(() => {
             });
         });      
     });
-}, 5000);
+}, 1000 * 30);

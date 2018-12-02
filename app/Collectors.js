@@ -39,6 +39,7 @@ class MobileBG {
             axios({
                 method: "get",
                 url: 'https://www.mobile.bg/pcgi/mobile.cgi?act=3&f1=' + page + '&slink=' + slink,
+                //The lower three are for the translation
                 headers: {
                     'DNT': '1'
                 },
@@ -119,6 +120,8 @@ class MobileBG {
     }
 
     /**
+     * Async recursion method . . .
+     * 
      * @param  {Object} requestData
      * @param  {Object} data
      * @param  {Number} data.page
@@ -126,7 +129,11 @@ class MobileBG {
      * @param  {MobileBGCarCollection} data.cars
      */
     async getNewCars(requestData, data) {
-        if (data.seen > 5) {
+        console.log("Car: " + data.cars.seenCar);
+        console.log("Top car: " + data.cars.seenTopCar);
+        console.log("Page: " + data.page);
+        console.log("======");
+        if (data.cars.seenTopCar && data.cars.seenCar) {
             return data;
         }
 
@@ -137,22 +144,20 @@ class MobileBG {
         let resultsPage = await this.getResultFromSetCookie(data.slink, data.page);
         let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
 
-        //If there are records store them
         if (cars.length > 0) {
-            console.log(cars);
             cars.forEach(car => {
-                if (data.shownCars.indexOf(car.link) === -1) {
-                    data.cars.addNewCar(car);
-                } else {
-                    if(!car.isTopOffer && data.seen <= 5) {
-                        data.seen += 1;
-                    } else if (data.seen > 5) {
-                        return data;
-                    }
+                if(car.isTopOffer && !data.cars.seenTopCar) {
+                    data.cars.addNewCar(data.shownCars, car);
+                } else if (!car.isTopOffer && !data.cars.seenCar) {
+                    data.cars.addNewCar(data.shownCars, car);
+                }
+                if(data.cars.seenTopCar && data.cars.seenCar) {
+                    return data;
                 }
             });
+
             data.page += 1;
-            return this.getCurrentCars(requestData, data);
+            return this.getNewCars(requestData, data);
         } else {
             return data;
         }
@@ -167,6 +172,8 @@ class MobileBGCarCollection {
         this.carLimit = carLimit;
         this.newCars = [];
         this.topCars = [];
+        this.seenTopCar = false; //Used to check if we have passed the top cars
+        this.seenCar = false; //Used to check if we have passed the normal cars
         this.cars = [];
     }
 
@@ -185,9 +192,22 @@ class MobileBGCarCollection {
         }
     }
 
-    addNewCar(car) {
+    /**
+     * 
+     * @param {String[]} seenCars 
+     * @param {MobileBG} car 
+     */
+    addNewCar(seenCars, car) {
         if (this.carLimit === -1 || this.newCars.length <= this.carLimit) {
-            this.newCars.push(car);
+            if (seenCars.indexOf(car.link) > -1) {
+                if(car.isTopOffer) {
+                    this.seenTopCar = true;
+                } else {
+                    this.seenCar = true;
+                }
+            } else {
+                this.newCars.push(car);
+            }
         }
     }
 

@@ -22,7 +22,7 @@ describe('Sending email', () => {
         });
 
         let car1 = new MobileBG('');
-        car1.desc = 'TEst';
+        car1.desc = 'jahsdvb kjahsdvb akjsghdv jkasdgvbjashdv akjsgdv jahsgdv jahsgdv jahgsdvbjhagsdvbjasd дата на произв. - май 2013 г., пробег - 163140 км, цвят - Бял, Перфектно състояние! ! ! Като Нов! ! ! Нов внос; E...<br>Особености - 4(5) Врати, Auto Start Stop function, Bluetoo...<br>Регион: Сливен, гр. Сливен';
         car1.title = 'test';
         car1.image = 'https://sc01-ha-b.mobile.bg/photos/1/med/11509028961101458_5.pic';
         car1.price = '1523 лв.';

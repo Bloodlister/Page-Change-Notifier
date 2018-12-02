@@ -7,7 +7,18 @@ class ListeningsController {
     //Display all listings
     //@route /list
     static listListenings(req, res) {
-        res.send('List of all the active Listenings');
+        Listening.find({ userId: req.session.user_id }, (err, listenings) => {
+            let responseData = [];
+            listenings.forEach(listening => {
+                responseData.push({
+                    id: listening._id,
+                    type: listening.listeningType,
+                    search: listening.searchParams
+                });
+            });
+
+            res.send(responseData);
+        });
     }
 
     //Creates new Listenings
@@ -42,7 +53,9 @@ class ListeningsController {
                                     res.status(200).send('success');
                                 }
                             })
-                        })
+                        }).catch(err => {
+                            console.log(err);
+                        });
                     }
                 })
             }
