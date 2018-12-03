@@ -147,7 +147,7 @@ class MobileBG {
                 } else if (!car.isTopOffer && !data.cars.seenCar) {
                     data.cars.addNewCar(data.shownCars, car);
                 }
-                if((data.cars.seenTopCar && data.cars.seenCar) || data.cars.seenCar) {
+                if(data.cars.seenCar) {
                     return data;
                 }
             });
