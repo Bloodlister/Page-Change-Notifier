@@ -129,10 +129,6 @@ class MobileBG {
      * @param  {MobileBGCarCollection} data.cars
      */
     async getNewCars(requestData, data) {
-        console.log("Car: " + data.cars.seenCar);
-        console.log("Top car: " + data.cars.seenTopCar);
-        console.log("Page: " + data.page);
-        console.log("======");
         if (data.cars.seenTopCar && data.cars.seenCar) {
             return data;
         }

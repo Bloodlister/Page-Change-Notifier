@@ -65,7 +65,11 @@ class ListeningsController {
     //Deletes listing by id
     //@route /delete
     static deleteListening(req, res) {
-        res.send('Delete Listening');
+        Listening.remove({ _id: req.body.listeningId}, (err) => {
+            res.send({
+                success: true,
+            });
+        });
     }
 
     static editListenings(req, res) {

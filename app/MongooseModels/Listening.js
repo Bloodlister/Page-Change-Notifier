@@ -43,6 +43,17 @@ ListeningSchema.statics.getNewCarsFromListenings = async function(Listenings) {
                 };
         
                 collection.getNewCars(listening.searchParams, data).then(({cars}) => {
+                    let shownCarsToKeep = listening.shownCars;
+                    if(listening.shownCars.length > 50) {
+                        shownCarsToKeep = [];
+                        listening.shownCars.forEach((carLink, index) => {
+                            if (index % 2 == 1) {
+                                shownCarsToKeep.push(carLink);
+                            }
+                        })
+                    }
+                    listening.shownCars = shownCarsToKeep;
+
                     listening.shownCars = listening.shownCars.concat(cars.getNewCarLinks());
                     listening.save((err, updatedListening) => {
                         if (!err) {

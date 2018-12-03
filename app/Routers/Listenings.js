@@ -7,6 +7,6 @@ router.expressUrlPath = '/listening';
 router.get('/list', loggedIn, (req, res) => ListeningsController.listListenings(req, res));
 router.get('/edit/:id', loggedIn, (req, res) => ListeningsController.editListenings(req, res));
 router.post('/create', loggedIn, (req, res) => ListeningsController.createListening(req, res));
-router.get('/delete', loggedIn, (req, res) => ListeningsController.deleteListening(req, res));
+router.post('/delete', loggedIn, (req, res) => ListeningsController.deleteListening(req, res));
 
 module.exports = router;

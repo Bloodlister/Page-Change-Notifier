@@ -1,8 +1,20 @@
 <template>
-    <div class="listenings">
-        <listening  v-for="(listening, index) in listenings" 
-                    :key="'listening_' + index"
-                    :data="listening" />
+    <div>
+        <router-link :to="{name:'home'}">Go Back</router-link>
+        <div v-if="listeningsStatus === 'done' && listenings.length > 0" id="listenings">
+            <listening  v-for="(listening, index) in listenings" 
+                        :key="index"
+                        :id="listening.id"
+                        :data="listening" 
+                        v-on:resetListenings="setListenings"
+                        class="listening"/>
+        </div>
+        <div v-else-if="listeningsStatus === 'done' && listenings.length === 0">
+            No Listenings found.
+        </div>
+        <div v-else>
+            Loading . . .
+        </div>
     </div>
 </template>
 
@@ -17,21 +29,45 @@ export default {
     data: function() {
         return {
             listenings: [],
+            listeningsStatus: 'waiting'
         };
     },
     computed: {
         hasListenings() {
-            if (this.listenings.lenght > 0) {
+            if (this.listenings.length > 0) {
                 return true;
             } 
             return false;
         }
     },
     mounted: function() {
-        this.$http.get('/listening/list')
-        .then(({data}) => {
-            this.listenings = data;
-        });
+        this.setListenings();
+    },
+    methods: {
+        setListenings() {
+            this.$http.get('/listening/list')
+            .then(({data}) => {
+                this.listeningsStatus = 'done';
+                this.listenings = data;
+            });
+        }
     }
 }
 </script>
+
+<style lang="scss" scoped>
+#listenings {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+
+    .listening {
+        border-radius: 10px;
+        border: 1px solid black;
+        max-width: 300px;
+        padding: 10px;
+        margin: 10px;
+    }
+}
+</style>

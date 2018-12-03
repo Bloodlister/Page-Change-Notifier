@@ -10,6 +10,20 @@
                 <keep-alive>
                     <component :is="currentSearch" v-on:passData="createListen"></component>
                 </keep-alive>
+                <div class="message">
+                    <div v-if="message !== ''" 
+                        class="success"
+                        @click="clearMessage"
+                        >
+                        {{ message }}
+                    </div>
+                    <div v-if="error !== ''" 
+                        class="error"
+                        @click="clearError"
+                        >
+                        {{ error }}
+                    </div>
+                </div>
             </div>
         </template>
     </div>
@@ -30,6 +44,8 @@ export default {
         return {
             index: 0,
             searches: [MobileBG, CarsBG],
+            message: '',
+            error: ''
         }
     },
     computed:  {
@@ -41,11 +57,17 @@ export default {
         createListen: function(data) {
             this.$http.post('/listening/create', data)
             .then(resp => {
-                console.log(resp);
+                this.message = "Success";
             })
             .catch(err => {
-                console.log(err);
-            })
+                this.message = "Error";
+            });
+        },
+        clearMessage: function() {
+            this.message = '';
+        },
+        clearError: function() {
+            this.error = '';
         }
     }
 };
@@ -72,6 +94,31 @@ export default {
         font-family: 'Courier New', Courier, monospace;
         font-weight: bold;
         font-size: 30px;
+    }
+}
+
+.message {
+    text-align: center;
+    text-transform: uppercase;
+
+    .success {
+        display: block;
+        margin: 10px auto;
+        width: 400px;
+        border: 1px solid rgb(150, 255, 150);
+        border-radius: 10px;
+        background-color: rgb(100, 255, 100);
+        color: white;
+    }
+
+    .error {
+        display: block;
+        margin: 10px auto;
+        width: 400px;
+        border: 1px solid rgb(255, 55, 55);
+        border-radius: 10px;
+        background-color: rgb(255, 70, 70);
+        color: black;
     }
 }
 </style>
