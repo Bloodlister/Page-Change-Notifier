@@ -35,7 +35,7 @@ export default {
         },
 
         validateValue: function() {
-            if(this.min_value > this.max_value) {
+            if(Number.parseInt(this.min_value) > Number.parseInt(this.max_value)) {
                 this.error = true;
             } else {
                 this.error = false;
