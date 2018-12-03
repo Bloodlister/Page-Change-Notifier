@@ -30,12 +30,11 @@ const ListeningSchema = mongoose.Schema({
  */
 ListeningSchema.statics.getNewCarsFromListenings = async function(Listenings) {
     return new Promise(resolve => {
-        let collection = new MobileBGCollection();
-        let data = {};
         
         let cars = Listenings.map(listening => {
             return new Promise(resolve => {
-                data = {
+                let collection = new MobileBGCollection();
+                let data = {
                     page: 1,
                     shownCars: listening.shownCars,
                     seen: 0,
@@ -46,7 +45,6 @@ ListeningSchema.statics.getNewCarsFromListenings = async function(Listenings) {
                     data.cars.seenCar = false;
                     data.cars.seenTopCar = false;
                 }
-        
                 collection.getNewCars(listening.searchParams, data).then(({cars}) => {
                     //Removing excess shown cars
                     let shownCarsToKeep = listening.shownCars;
@@ -72,7 +70,11 @@ ListeningSchema.statics.getNewCarsFromListenings = async function(Listenings) {
         
         let result = Promise.all(cars);
         result.then(res => {
-            resolve(res[0]);
+            let newCars = [];
+            res.forEach(newCarsCollection => {
+                newCars = newCars.concat(newCarsCollection);
+            });
+            resolve(newCars);
         });
     })
 }
