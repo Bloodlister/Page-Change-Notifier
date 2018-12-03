@@ -35,6 +35,9 @@ class AuthController {
     }
 
     static registerUser(req, res) {
+        if (req.body.app_password != "super_secret_password_123456") {
+            return res.redirect('/register?err=Wrong app password');
+        }
         if (req.body.email && req.body.username && req.body.password && req.body.passwordConf) {
             let userData = {
                 email: req.body.email,
