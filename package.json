@@ -10,7 +10,7 @@
     "server": "node server.js",
     "mobilebg": "node cron_MobileBG.js",
     "carsbg": "node cron_CarsBG.js",
-    "keep_alive": "node keep_awake.js"
+    "keep_awake": "node keep_awake.js"
   },
   "dependencies": {
     "axios": "^0.18.0",
