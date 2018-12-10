@@ -4,6 +4,10 @@ const Collection = require('./../Collectors.js').MobileBGCarCollection;
 const MobileBGCollection = require('./../Collectors.js').MobileBG;
 
 const ListeningSchema = mongoose.Schema({
+    collectionId: {
+        type: Number,
+        requried: true,
+    },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,

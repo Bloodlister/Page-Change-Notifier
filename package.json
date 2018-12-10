@@ -8,7 +8,7 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "server": "node server.js",
-    "mobilebg": "node cron_MobileBG.js",
+    "mobilebg": "node --max-old-space-size=2064 cron_MobileBG.js",
     "carsbg": "node cron_CarsBG.js"
   },
   "dependencies": {

@@ -31,6 +31,7 @@ class ListeningsController {
                 res.status(500).send('fail');
             } else {
                 let listeningData = {
+                    collectionId: Math.floor(Math.random() * 5) + 1, // Placed with random collection ID to increase productivity
                     userId: req.session.user_id,
                     listeningType: req.body.listeningType,
                     searchParams: req.body.data,
