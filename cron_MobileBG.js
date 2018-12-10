@@ -11,7 +11,8 @@ if (!process.env.CONNECTION_STRING) {
 }
 
 function startSearch(collectionId) {
-    getUsers().then(users => {
+    getUsers()
+    .then(users => {
         users.forEach(user => {
             getListenings(user._id, collectionId).then(Listenings => {
                 if (Listenings.length > 0) {
@@ -24,9 +25,10 @@ function startSearch(collectionId) {
                         }
                     })
                 }
-            });
+            })
+            .catch(err => { console.log(err) })
         });
-    });
+    }).catch(err => console.log(err));
 }
 
 function getUsers() {
@@ -52,7 +54,7 @@ function getListenings(userId, collectionId) {
 }
 
 /* COLLECTION 1 */
-setInterval(() => { startSearch(1); }, 1000 * 120);
+setInterval(() => { startSearch(1); }, 1000 * 10);
 
 /* COLLECTION 2 */
 setInterval(() => { startSearch(2); }, 1000 * 120);

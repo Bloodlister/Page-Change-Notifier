@@ -49,7 +49,7 @@ ListeningSchema.statics.getNewCarsFromListenings = async function(Listenings) {
                     data.cars.seenCar = false;
                     data.cars.seenTopCar = false;
                 }
-                collection.getNewCars(listening.searchParams, data).then(({cars}) => {
+                collection.getNewCars(listening.searchParams, data).then((cars) => {
                     //Removing excess shown cars
                     let shownCarsToKeep = listening.shownCars;
                     if(listening.shownCars.length > 50) {

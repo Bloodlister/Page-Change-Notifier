@@ -13,8 +13,7 @@ class MobileBG {
                 data: queryString.stringify(requestData),
                 headers: { "Content-type": "application/x-www-form-urlencoded" },
             })
-            .then(resp => {
-                let valid = false;
+            .then((resp, test) => {
                 resp.headers['set-cookie'].forEach(setCookie => {
                     if (setCookie.startsWith('mobile_session_id_redirect') && setCookie.indexOf('slink') > -1) {
                         resolve(this.getSlink(setCookie));
@@ -95,28 +94,35 @@ class MobileBG {
      * @param  {Boolean} data.done
      * @param  {MobileBGCarCollection} data.cars
      */
-    async getCurrentCars(requestData, data) {
+    getCurrentCars(requestData, data) {
         if (data.cars.limitReached()) {
             return data;
         }
         
         if (!data.slink) {
-            data.slink = await this.getRedirect(requestData);
-        }
-        
-        let resultsPage = await this.getResultFromSetCookie(data.slink, data.page);
-        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
-
-        //If there are records store them
-        if (cars.length > 0) {
-            cars.forEach(car => {
-                data.cars.addCar(car);
+            this.getRedirect(requestData).then(slink => {
+                data.slink = slink;
+            }).catch(err => {
+                console.log(err);
             });
-            data.page += 1;
-            return this.getCurrentCars(requestData, data);
-        } else {
-            return data;
         }
+
+        this.getResultFromSetCookie(data.slink, data.page).then(resultsPage => {
+            let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
+    
+            //If there are records store them
+            if (cars.length > 0) {
+                cars.forEach(car => {
+                    data.cars.addCar(car);
+                });
+                data.page += 1;
+                return this.getCurrentCars(requestData, data);
+            } else {
+                return data;
+            }
+        }).catch(err => {
+            console.log(err);
+        });
     }
 
     /**
@@ -133,30 +139,48 @@ class MobileBG {
             return data;
         }
 
-        if (!data.slink) {
-            data.slink = await this.getRedirect(requestData);
-        }
+        this.getSlink(requestData).then(slink => {
+            if(!data.slink) {
+                data.slink = slink;
+            }
 
-        let resultsPage = await this.getResultFromSetCookie(data.slink, data.page);
-        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
-
-        if (cars.length > 0) {
-            cars.forEach(car => {
-                if(car.isTopOffer && !data.cars.seenTopCar) {
-                    data.cars.addNewCar(data.shownCars, car);
-                } else if (!car.isTopOffer && !data.cars.seenCar) {
-                    data.cars.addNewCar(data.shownCars, car);
-                }
-                if(data.cars.seenCar) {
-                    return data;
-                }
+            return new Promise((resolve, reject) => {
+                this.getResultFromSetCookie(data.slink, data.page).then(resultsPage => {
+                    let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
+            
+                    if (cars.length > 0) {
+                        cars.forEach(car => {
+                            if(car.isTopOffer && !data.cars.seenTopCar) {
+                                data.cars.addNewCar(data.shownCars, car);
+                            } else if (!car.isTopOffer && !data.cars.seenCar) {
+                                data.cars.addNewCar(data.shownCars, car);
+                            }
+                            if(data.cars.seenCar) {
+                                resolve(data);
+                            }
+                        });
+            
+                        data.page += 1;
+                        resolve(this.getNewCars(requestData, data));
+                    } else {
+                        resolve(data);
+                    }
+                }).catch(err => {
+                    reject(err);
+                });
             });
+        });
+    }
 
-            data.page += 1;
-            return this.getNewCars(requestData, data);
-        } else {
-            return data;
-        }
+    getSlink(requestData) {
+        return new Promise((resolve, reject) => {
+            this.getRedirect(requestData)
+            .then(result => {
+                resolve(result);
+            }).catch(err => {
+                reject(err);
+            });
+        });
     }
 }
 
