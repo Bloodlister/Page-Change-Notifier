@@ -3,8 +3,12 @@ const Mailer = require('./app/Mailing.js').MobileBG;
 const UserCollection = require('./app/MongooseModels/User.js');
 const ListeningCollection = require('./app/MongooseModels/Listening.js');
 
-const MongoStoreOptions = require('./settings.js');
-mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
+if (!process.env.CONNECTION_STRING) {
+    const MongoStoreOptions = require('./settings.js');
+    mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
+} else {
+    mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
+}
 
 function startSearch(collectionId) {
     getUsers().then(users => {
