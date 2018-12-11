@@ -1,55 +1,58 @@
-const axios = require('axios');
-const queryString = require('querystring');
+const request = require('request');
+const iconv = require('iconv-lite');
 const { JSDOM } = require('jsdom');
 const mobileBgReducer = require('./Reducers.js').MobileBG;
 
 class MobileBG {
-
-    async getRedirect(requestData) {
+    getRedirect(requestData) {
         return new Promise((resolve, reject) => {
-            axios({
-                method: "post",
+            request.post({
                 url: 'https://www.mobile.bg/pcgi/mobile.cgi',
-                data: queryString.stringify(requestData),
-                headers: { "Content-type": "application/x-www-form-urlencoded" },
-            })
-            .then((resp, test) => {
-                resp.headers['set-cookie'].forEach(setCookie => {
-                    if (setCookie.startsWith('mobile_session_id_redirect') && setCookie.indexOf('slink') > -1) {
-                        resolve(this.getSlink(setCookie));
-                    }
-                });
-            })
-            .catch(err => {
-                reject(err);
+                form: requestData,
+                headers: { 
+                    "Content-type": "application/x-www-form-urlencoded",
+                },
+            }).on('response', (res) => {
+                if (res.headers.location && res.headers.location.indexOf('slink') > -1) {
+                    resolve(this.getSlinkFromLocation(res.headers.location));
+                } else {
+                    res.headers['set-cookie'].forEach(setCookie => {
+                        if(setCookie.startsWith('mobile_session_id_redirect') && setCookie.indexOf('slink') > -1) {
+                            resolve(this.getSlinkFromSetCookie(setCookie));
+                        }
+                    });
+                }
             });
         });
     }
 
-    getSlink(cookie) {
-        cookie = cookie.replace(new RegExp(/.+slink%09/gi), '');
-        cookie = cookie.replace(new RegExp(/%09.+/gi), '');
+    getSlinkFromLocation(location) {
+        let slink = location;
+        slink = slink.replace(new RegExp(/.+slink=/gi), '');
+        slink = slink.replace(new RegExp(/&.+/gi), '');
+        return slink;
+    }
 
-        return cookie;
+    getSlinkFromSetCookie(setCookie) {
+        let slink = setCookie;
+        slink = slink.replace(new RegExp(/.+slink%09/gi), '');
+        slink = slink.replace(new RegExp(/%09.+/gi), '');
     }
 
     getResultFromSetCookie(slink, page) {
         return new Promise((resolve, reject) => {
-            axios({
-                method: "get",
+            let result = '';
+            request.get({
                 url: 'https://www.mobile.bg/pcgi/mobile.cgi?act=3&f1=' + page + '&slink=' + slink,
-                //The lower three are for the translation
+                //The lower three are for the translation,
+                encoding: null,
                 headers: {
                     'DNT': '1'
                 },
-                responseType: 'arraybuffer',
-                responseEncoding: 'binary'
-            })
-            .then(resp => {
-                resolve(resp);
-            })
-            .catch(err => {
-                reject(err);
+            }).on('data', data => {
+                result += iconv.decode(Buffer.from(data), 'win1251');
+            }).on('end', () => {
+                resolve(result);
             });
         });
     }
@@ -95,34 +98,36 @@ class MobileBG {
      * @param  {MobileBGCarCollection} data.cars
      */
     getCurrentCars(requestData, data) {
-        if (data.cars.limitReached()) {
-            return data;
-        }
-        
-        if (!data.slink) {
-            this.getRedirect(requestData).then(slink => {
-                data.slink = slink;
-            }).catch(err => {
-                console.log(err);
-            });
-        }
-
-        this.getResultFromSetCookie(data.slink, data.page).then(resultsPage => {
-            let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
-    
-            //If there are records store them
-            if (cars.length > 0) {
-                cars.forEach(car => {
-                    data.cars.addCar(car);
-                });
-                data.page += 1;
-                return this.getCurrentCars(requestData, data);
-            } else {
-                return data;
+        return new Promise((resolve, reject) => {
+            if (data.cars.limitReached()) {
+                resolve(data);
             }
-        }).catch(err => {
-            console.log(err);
-        });
+
+            if (!data.slink) {
+                this.getRedirect(requestData).then(slink => {
+                    data.slink = slink;
+                    resolve(this.getCurrentCars(requestData, data));
+                }).catch(err => {
+                    reject(err);
+                });
+            } else {
+                this.getResultFromSetCookie(data.slink, data.page).then(resultsPage => {
+                    let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage));
+                    //If there are records store them
+                    if (cars.length > 0) {
+                        cars.forEach(car => {
+                            data.cars.addCar(car);
+                        });
+                        data.page += 1;
+                        resolve(this.getCurrentCars(requestData, data));
+                    } else {
+                        resolve(data);
+                    }
+                }).catch(err => {
+                    reject(err);
+                });
+            }
+        })
     }
 
     /**
@@ -134,40 +139,41 @@ class MobileBG {
      * @param  {Boolean} data.done
      * @param  {MobileBGCarCollection} data.cars
      */
-    async getNewCars(requestData, data) {
-        if (data.cars.seenTopCar && data.cars.seenCar) {
-            return data;
-        }
-
-        this.getSlink(requestData).then(slink => {
-            if(!data.slink) {
-                data.slink = slink;
+    getNewCars(requestData, data) {
+        return new Promise((resolve, reject) => {
+            if (data.cars.seenTopCar && data.cars.seenCar) {
+                resolve(data);
             }
+    
+            this.getSlink(requestData).then(slink => {
+                if(!data.slink) {
+                    data.slink = slink;
+                    resolve(this.getNewCars(requestData, data));
+                } else {
+                    this.getResultFromSetCookie(data.slink, data.page).then(resultsPage => {
+                        let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage));
 
-            return new Promise((resolve, reject) => {
-                this.getResultFromSetCookie(data.slink, data.page).then(resultsPage => {
-                    let cars = this.getCarObjects(this.getCarTablesFromHTML(resultsPage.data));
-            
-                    if (cars.length > 0) {
-                        cars.forEach(car => {
-                            if(car.isTopOffer && !data.cars.seenTopCar) {
-                                data.cars.addNewCar(data.shownCars, car);
-                            } else if (!car.isTopOffer && !data.cars.seenCar) {
-                                data.cars.addNewCar(data.shownCars, car);
-                            }
-                            if(data.cars.seenCar) {
-                                resolve(data);
-                            }
-                        });
-            
-                        data.page += 1;
-                        resolve(this.getNewCars(requestData, data));
-                    } else {
-                        resolve(data);
-                    }
-                }).catch(err => {
-                    reject(err);
-                });
+                        if (cars.length > 0) {
+                            cars.forEach(car => {
+                                if (car.isTopOffer && !data.cars.seenTopCar) {
+                                    data.cars.addNewCar(data.shownCars, car);
+                                } else if (!car.isTopOffer && !data.cars.seenCar) {
+                                    data.cars.addNewCar(data.shownCars, car);
+                                }
+                                if (data.cars.seenCar) {
+                                    resolve(data);
+                                }
+                            });
+
+                            data.page += 1;
+                            resolve(this.getNewCars(requestData, data));
+                        } else {
+                            resolve(data);
+                        }
+                    }).catch(err => {
+                        reject(err);
+                    });   
+                }
             });
         });
     }

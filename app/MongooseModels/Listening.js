@@ -61,11 +61,10 @@ ListeningSchema.statics.getNewCarsFromListenings = async function(Listenings) {
                         })
                     }
                     listening.shownCars = shownCarsToKeep;
-
-                    listening.shownCars = listening.shownCars.concat(cars.getNewCarLinks());
+                    listening.shownCars = listening.shownCars.concat(cars.cars.getNewCarLinks());
                     listening.save((err, updatedListening) => {
                         if (!err) {
-                            resolve(cars.newCars);
+                            resolve(cars.cars.newCars);
                         }
                     })
                 });

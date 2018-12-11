@@ -7,6 +7,7 @@ class ListeningsController {
     //Display all listings
     //@route /list
     static listListenings(req, res) {
+        console.log(req.session.user_id);
         Listening.find({ userId: req.session.user_id }, (err, listenings) => {
             let responseData = [];
             listenings.forEach(listening => {
@@ -47,6 +48,7 @@ class ListeningsController {
                             cars: new MobileBgCollection(20),
                         }).then(result => {
                             listening.shownCars = result.cars.getCarLinks();
+                            
                             listening.save((err, updatedListening) => {
                                 if (err) {
                                     res.status(500).send('fail');

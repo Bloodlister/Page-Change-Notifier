@@ -9,11 +9,16 @@ const MongoStore = require('connect-mongo')(session);
 const Routing = require('./routing.js');
 const Middleware = require('./middleware.js');
 
+let mongooseSettings = { 
+    useNewUrlParser: true,
+    useCreateIndex: true,
+};
+
 if (!process.env.CONNECTION_STRING) {
     const MongoStoreOptions = require('./settings.js');
-    mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
+    mongoose.connect(MongoStoreOptions.connectionString, mongooseSettings);
 } else {
-    mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
+    mongoose.connect(process.env.CONNECTION_STRING, mongooseSettings);
 }
 
 const app = express();

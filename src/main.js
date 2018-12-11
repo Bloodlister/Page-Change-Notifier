@@ -6,7 +6,7 @@ import router from './router';
 import App from './App.vue';
 
 Vue.use(VueAxios, axios);
-Vue.axios.defaults.baseURL = 'https://notifier-for-new-cars.herokuapp.com';
+// Vue.axios.defaults.baseURL = 'https://notifier-for-new-cars.herokuapp.com';
 
 new Vue({
   store,

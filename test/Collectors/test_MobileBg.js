@@ -10,7 +10,7 @@ const dataToSend = {
     f2: "1",
     f3: "1",
     f4: "1",
-    f5: "",
+    f5: "Audi",
     f6: "",
     f7: "",
     f8: "",
@@ -54,9 +54,9 @@ describe('Getting results from MobileBG', function() {
     describe('Gets the result from the slink', () => {
         it('test', (done) => {
             collector.getResultFromSetCookie(slink, 1).then(res => {
-                assert.strictEqual(typeof res.data, 'string');
-                assert.strictEqual(res.data.startsWith('<!DOCTYPE'), true);
-                results = res.data;
+                assert.strictEqual(typeof res, 'string');
+                assert.strictEqual(res.startsWith('<!DOCTYPE'), true);
+                results = res;
                 done();
             })
         });
