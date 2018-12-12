@@ -5,9 +5,13 @@ const ListeningCollection = require('./app/MongooseModels/Listening.js');
 
 if (!process.env.CONNECTION_STRING) {
     const MongoStoreOptions = require('./settings.js');
-    mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true });
+    mongoose.connect(MongoStoreOptions.connectionString, { useNewUrlParser: true }, (err) => {
+        console.log(err);
+    });
 } else {
-    mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true });
+    mongoose.connect(process.env.CONNECTION_STRING, { useNewUrlParser: true }, (err) => {
+        console.log(err);
+    });
 }
 
 function startSearch(collectionId) {

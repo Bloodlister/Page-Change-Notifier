@@ -9,8 +9,11 @@ class MobileBG {
             request.post({
                 url: 'https://www.mobile.bg/pcgi/mobile.cgi',
                 form: requestData,
+                forever: true,
                 headers: { 
                     "Content-type": "application/x-www-form-urlencoded",
+                    "Upgrade-Insecure-Requests": 1,
+                    "User-Agent": "User - Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36",
                 },
             }).on('response', (res) => {
                 if (res.headers.location && res.headers.location.indexOf('slink') > -1) {
@@ -22,48 +25,55 @@ class MobileBG {
                         }
                     });
                 }
+            }).on('error', err => {
+                console.log("1==============================");
             });
         });
     }
-
+    
     getSlinkFromLocation(location) {
         let slink = location;
         slink = slink.replace(new RegExp(/.+slink=/gi), '');
         slink = slink.replace(new RegExp(/&.+/gi), '');
         return slink;
     }
-
+    
     getSlinkFromSetCookie(setCookie) {
         let slink = setCookie;
         slink = slink.replace(new RegExp(/.+slink%09/gi), '');
         slink = slink.replace(new RegExp(/%09.+/gi), '');
     }
-
+    
     getResultFromSetCookie(slink, page) {
         return new Promise((resolve, reject) => {
             let result = '';
             request.get({
                 url: 'https://www.mobile.bg/pcgi/mobile.cgi?act=3&f1=' + page + '&slink=' + slink,
                 //The lower three are for the translation,
+                forever: true,
                 encoding: null,
                 headers: {
-                    'DNT': '1'
+                    'DNT': '1',
+                    "Upgrade-Insecure-Requests": 1,
+                    "User-Agent": "User - Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36",
                 },
             }).on('data', data => {
                 result += iconv.decode(Buffer.from(data), 'win1251');
+            }).on('error', err => {
+                console.log("2++++++++++++++++++++++++++++++++++=");
             }).on('end', () => {
                 resolve(result);
             });
         });
     }
-
+    
     /**
      * @param {String} html 
      * @returns {HTMLTableElement}
      */
     getCarTablesFromHTML(html) {
         let form = new JSDOM(html).window.document.querySelectorAll('form[name="search"]')[0];
-
+        
         let carTables = [];
         form.querySelectorAll('table').forEach(table => {
             if (table.querySelector('tbody').querySelectorAll('tr').length > 6) {
