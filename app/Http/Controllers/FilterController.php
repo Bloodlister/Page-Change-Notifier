@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Filter;
 use Illuminate\Http\Request;
 
-class Listenings extends Controller
+class FilterController extends Controller
 {
-    public function index() {
-        return view('vue');
+    public function filterForm() {
+        return view('filters.vue');
     }
 
     public function createFilter(Request $request) {
         $filter = new Filter($request->all());
         $filter->save();
-        $filter->init();
     }
 }

@@ -11,4 +11,8 @@
 |
 */
 
-Route::get('/', 'Listenings@index');
+Route::group(['middleware' => ['web']], function () {
+    Route::get('/filters', 'FilterController@filterForm');
+});
+Route::get('/logout', 'Auth\LoginController@logout')->name('logout');
+Auth::routes();

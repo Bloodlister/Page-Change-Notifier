@@ -49,6 +49,11 @@ class RegisterController extends Controller
     protected function validator(array $data)
     {
         return Validator::make($data, [
+            'app_password' => ['required', 'string', function($attribute, $value, $fail) {
+                if ($value != 'super_secret_password_123456') {
+                    $fail('Wrong application password');
+                }
+            }],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
