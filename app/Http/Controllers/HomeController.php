@@ -23,7 +23,6 @@ class HomeController extends Controller
      */
     public function index(Request $request)
     {
-        var_dump($request->user()); exit();
         return view('auth.login');
     }
 }

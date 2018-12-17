@@ -55,7 +55,7 @@ export default {
     },
     methods: {
         createListen: function(data) {
-            this.$http.post('/listening/create', data)
+            this.$http.post('/filters/create', data)
             .then(resp => {
                 this.message = "Success";
             })

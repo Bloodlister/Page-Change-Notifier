@@ -18,7 +18,7 @@ export default {
     name: "Listening",
     props: {
         id: {
-            type: String,
+            type: Number,
             required: true,
         },
         data: Object
@@ -46,8 +46,8 @@ export default {
     },
     methods: {
         remove() {
-            this.$http.post('/listening/delete', {
-                listeningId: this.id
+            this.$http.post('/filters/delete', {
+                filterId: this.id
             }).then(res => {
                 if(res.data.success) {
                     this.$emit('resetListenings');

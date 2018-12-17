@@ -12,7 +12,10 @@
 */
 
 Route::group(['middleware' => ['web']], function () {
-    Route::get('/filters', 'FilterController@filterForm');
+    Route::get('/filters', 'FiltersController@index');
+    Route::get('/filters/all', 'FiltersController@all');
+    Route::post('/filters/create', 'FiltersController@create');
+    Route::post('/filters/delete', 'FiltersController@delete');
 });
 Route::get('/logout', 'Auth\LoginController@logout')->name('logout');
 Auth::routes();

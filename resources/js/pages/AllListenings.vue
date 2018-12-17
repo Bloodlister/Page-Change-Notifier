@@ -1,7 +1,7 @@
 <template>
     <div>
         <router-link :to="{name:'home'}">Go Back</router-link>
-        <div v-if="listeningsStatus === 'done' && listenings.length > 0" id="listenings">
+        <div v-if="listeningsStatus === 2 && listenings.length > 0" id="listenings">
             <listening  v-for="(listening, index) in listenings" 
                         :key="index"
                         :id="listening.id"
@@ -9,7 +9,7 @@
                         v-on:resetListenings="setListenings"
                         class="listening"/>
         </div>
-        <div v-else-if="listeningsStatus === 'done' && listenings.length === 0">
+        <div v-else-if="listeningsStatus === 2 && listenings.length === 0">
             No Listenings found.
         </div>
         <div v-else>
@@ -29,7 +29,7 @@ export default {
     data: function() {
         return {
             listenings: [],
-            listeningsStatus: 'waiting'
+            listeningsStatus: 1
         };
     },
     computed: {
@@ -45,9 +45,9 @@ export default {
     },
     methods: {
         setListenings() {
-            this.$http.get('/listening/list')
+            this.$http.get('/filters/all')
             .then(({data}) => {
-                this.listeningsStatus = 'done';
+                this.listeningsStatus = 2;
                 this.listenings = data;
             });
         }

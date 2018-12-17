@@ -15,9 +15,8 @@ class LoggedIn
      */
     public function handle($request, Closure $next)
     {
-//        var_dump($request->user(), $request->path()); exit();
         if ($request->user()) {
-            if (!in_array($request->path(), ['filters', 'filters/list', 'logout'])) {
+            if (!in_array($request->path(), ['filters', 'filters/all', 'filters/delete', 'filters/create', 'logout'])) {
                 return redirect('/filters');
             }
         } else {
