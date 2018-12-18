@@ -25,8 +25,24 @@ class Filter extends Model
 
     public $carValidationClass = MobileBG::class;
 
+    protected $fillable = ['type', 'search_params'];
+
     public function user() {
         return $this->belongsTo(User::class, 'id');
+    }
+
+    public function setSearchParamsAttribute($value) {
+        $this->attributes['search_params'] = \json_encode($value);
+    }
+
+    public function getSearchParamsAttribute() {
+        $search_params = json_decode($this->attributes['search_params'], true);
+
+        if ($this->type == "MobileBG" && $search_params['f9'] === 'BGN') {
+            $search_params['f9'] = 'лв.';
+        }
+
+        return $search_params;
     }
 
     /**
@@ -46,7 +62,11 @@ class Filter extends Model
 
     protected function initiateFilter() {
         $carRetriever = $this->getRetriever($this->type);
-        $initialCars = $carRetriever->getCars($this->search_params);
+        $searchParams = $this->search_params;
+        if ($this->type && $searchParams['f9'] != 'лв.' && $this->attributes['search_params']['f9'] == 'BGN') {
+            $searchParams['f9'] = 'лв.';
+        }
+        $initialCars = $carRetriever->getCars(['search_params' => $this->getSearchParamsAttribute()], 1);
         $this->seenCars()->saveMany($initialCars);
     }
 
@@ -56,11 +76,11 @@ class Filter extends Model
      * @throws \Exception
      */
     private function getRetriever($type) : IRetriever {
-        return Factory::getRetriever($type);
+        return Factory::get($type);
     }
 
     public function seenCarInCollection(Collection $collection) : bool {
-        $validator = \App\CarValidator\Factory::get($this->type);
+        $validator = Factory::get($this->type);
         $validator->collectionContainsSeenCar($this, $collection);
     }
 

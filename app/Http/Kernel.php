@@ -4,7 +4,6 @@ namespace App\Http;
 
 use App\Http\Middleware\LoggedIn;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
-use Illuminate\Session\Middleware\StartSession;
 
 class Kernel extends HttpKernel
 {

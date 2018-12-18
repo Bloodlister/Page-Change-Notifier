@@ -12,14 +12,24 @@ class FiltersController extends Controller
     }
 
     public function all(Request $request) {
-        return response()->json(Filter::where('user_id', '=', $request->user()->id)->get()->map(function ($filter) {
-            return $filter->toArray();
-        }));
+        return response()->json(
+            Filter::where('user_id', '=', $request->user()->id)
+                ->get()
+                ->map(function ($filter) {
+                    /** @var Filter $filter */
+                    return $filter->toArray();
+                })
+        );
     }
 
     public function create(Request $request) {
-        $filter = new Filter($request->all());
+        $filter = new Filter();
+        $filter->type = $request->post('type');
+        $filter->user_id = $request->user()->id;
+        $filter->search_params = $request->post('data');
         $filter->save();
+
+        return response()->json(['success' => true]);
     }
 
     public function delete(Request $request) {

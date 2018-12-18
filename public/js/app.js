@@ -50923,7 +50923,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     methods: {
         passToParent: function passToParent() {
             this.$emit('passData', {
-                listeningType: "MobileBG",
+                type: "MobileBG",
                 data: this.storage
             });
         }
@@ -51665,8 +51665,8 @@ var requiredFields = {
         },
         dropdownData: {
             hrefValue: 'f9',
-            options: [{ value: 'лв.', label: 'лв.' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }],
-            default: 'лв.'
+            options: [{ value: 'BGN', label: 'лв.' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }],
+            default: 'BGN'
         }
     },
     betweens: [{
@@ -52418,6 +52418,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
+//
+//
 
 /* harmony default export */ __webpack_exports__["default"] = ({
     name: "Listening",
@@ -52431,18 +52433,19 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     computed: {
         searchParams: function searchParams() {
             var data = {};
-            if (this.data.search !== undefined) {
-                if (this.data.search['f5'] !== '') {
-                    data.brand = this.data.search['f5'];
-                    data.model = this.data.search['f6'];
+            if (this.data.search_params !== undefined) {
+                if (this.data.search_params['f5'] !== '') {
+                    data.brand = this.data.search_params['f5'];
+                    data.model = this.data.search_params['f6'];
                 }
-                if (this.data.search['f7'] !== '' || this.data.search['f8'] !== '') {
-                    data.startPrice = this.data.search['f7'];
-                    data.endPrice = this.data.search['f8'];
+                if (this.data.search_params['f7'] !== '' || this.data.search_params['f8'] !== '') {
+                    data.startPrice = this.data.search_params['f7'];
+                    data.endPrice = this.data.search_params['f8'];
+                    data.currency = this.data.search_params['f9'];
                 }
-                if (this.data.search['f10'] !== '' || this.data.search['f11'] !== '') {
-                    data.startYear = this.data.search['f10'];
-                    data.endYear = this.data.search['f11'];
+                if (this.data.search_params['f10'] !== '' || this.data.search_params['f11'] !== '') {
+                    data.startYear = this.data.search_params['f10'];
+                    data.endYear = this.data.search_params['f11'];
                 }
             }
 
@@ -52487,10 +52490,14 @@ var render = function() {
       _vm._v(" "),
       _c("p", [
         _vm._v(
-          "Price: " +
+          "Price:\n            " +
             _vm._s(_vm.searchParams.startPrice) +
-            " - " +
-            _vm._s(_vm.searchParams.endPrice)
+            _vm._s(
+              _vm.searchParams.startPrice ? _vm.searchParams.currency : ""
+            ) +
+            " -\n            " +
+            _vm._s(_vm.searchParams.endPrice) +
+            _vm._s(_vm.searchParams.endPrice ? _vm.searchParams.currency : "")
         )
       ]),
       _vm._v(" "),

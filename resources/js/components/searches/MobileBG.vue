@@ -47,7 +47,7 @@ export default {
     methods: {
         passToParent: function() {
             this.$emit('passData', {
-                listeningType: "MobileBG",
+                type: "MobileBG",
                 data: this.storage
             });
         },

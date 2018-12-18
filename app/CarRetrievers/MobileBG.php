@@ -5,14 +5,20 @@ namespace App\CarRetriever;
 use Illuminate\Support\Collection;
 
 class MobileBG extends Retriever {
-    const IDENTIFIER = 1;
+    const IDENTIFIER = 'MobileBG';
 
     public function getCars(array $searchParams, int $page = 1) : Collection {
-
+        var_dump($searchParams); exit();
+        if (!array_key_exists('slink', $searchParams)) {
+            $searchParams['slink'] = $this->getSlink($searchParams['search_params']);
+        }
+        
+        var_dump($searchParams); exit();
     }
 
     public function getSlink($searchParams) {
-        $headers = $this->getHeaders();
+        $headers = $this->getHeaders($searchParams);
+        var_dump($headers); exit();
     }
 
     public function getHeaders($searchParams) {
