@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\Auth;
 
 class LoggedIn
 {
@@ -13,8 +14,9 @@ class LoggedIn
      * @param  \Closure  $next
      * @return mixed
      */
-    public function handle($request, Closure $next)
+    public function handle($request, Closure $next, $guard = null)
     {
+//        var_dump(Auth::guard($guard)->check()); exit();
         if ($request->user()) {
             if (!in_array($request->path(), ['filters', 'filters/all', 'filters/delete', 'filters/create', 'logout'])) {
                 return redirect('/filters');

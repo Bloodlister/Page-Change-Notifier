@@ -23,13 +23,22 @@ class FiltersController extends Controller
     }
 
     public function create(Request $request) {
-        $filter = new Filter();
-        $filter->type = $request->post('type');
-        $filter->user_id = $request->user()->id;
-        $filter->search_params = $request->post('data');
-        $filter->save();
-
-        return response()->json(['success' => true]);
+        $error = '';
+        try {
+            $filter = new Filter();
+            $filter->type = $request->post('type');
+            $filter->user_id = $request->user()->id;
+            $filter->search_params = $request->post('data');
+            $filter->save();
+        } catch (\Exception $exception) {
+            $error = $exception->getMessage();
+        }
+        return response()->json(
+            ['success' => true, 'error' => $error],
+            200,
+            ['Content-type' => 'application/json'],
+            JSON_UNESCAPED_UNICODE
+        );
     }
 
     public function delete(Request $request) {

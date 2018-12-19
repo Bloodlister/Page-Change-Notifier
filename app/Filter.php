@@ -66,7 +66,10 @@ class Filter extends Model
         if ($this->type && $searchParams['f9'] != 'лв.' && $this->attributes['search_params']['f9'] == 'BGN') {
             $searchParams['f9'] = 'лв.';
         }
-        $initialCars = $carRetriever->getCars(['search_params' => $this->getSearchParamsAttribute()], 1);
+
+        $collection = \App\CarCollection\Factory::get($this->type);
+        $collection->setSearchParams($searchParams);
+        $initialCars = $carRetriever->getCars($collection, 1);
         $this->seenCars()->saveMany($initialCars);
     }
 
