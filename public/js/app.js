@@ -51665,8 +51665,8 @@ var requiredFields = {
         },
         dropdownData: {
             hrefValue: 'f9',
-            options: [{ value: 'BGN', label: 'лв.' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }],
-            default: 'BGN'
+            options: [{ value: 'лв.', label: 'лв.' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }],
+            default: 'лв.'
         }
     },
     betweens: [{

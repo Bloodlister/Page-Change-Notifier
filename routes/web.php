@@ -19,4 +19,6 @@ Route::middleware('auth')->group(function () {
 });
 Route::get('/logout', 'Auth\LoginController@logout');
 
+Route::get('/testMail', 'HomeController@test');
+
 Auth::routes();

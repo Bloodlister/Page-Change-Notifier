@@ -211,11 +211,11 @@ export default {
         dropdownData: {
             hrefValue: 'f9',
             options: [
-                { value: 'BGN', label: 'лв.' },
+                { value: 'лв.', label: 'лв.' },
                 { value: 'USD', label: 'USD' },
                 { value: 'EUR', label: 'EUR' },
             ],
-            default: 'BGN',
+            default: 'лв.',
         },
     },
     betweens: [

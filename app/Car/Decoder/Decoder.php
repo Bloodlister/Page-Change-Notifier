@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Decoders;
+namespace App\Car\Decoder;
 
 use App\Car;
 use Illuminate\Support\Collection;

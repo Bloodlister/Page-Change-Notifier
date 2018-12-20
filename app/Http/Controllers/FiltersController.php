@@ -23,6 +23,7 @@ class FiltersController extends Controller
     }
 
     public function create(Request $request) {
+        $success = true;
         $error = '';
         try {
             $filter = new Filter();
@@ -31,10 +32,11 @@ class FiltersController extends Controller
             $filter->search_params = $request->post('data');
             $filter->save();
         } catch (\Exception $exception) {
+            $success = false;
             $error = $exception->getMessage();
         }
         return response()->json(
-            ['success' => true, 'error' => $error],
+            ['success' => $success, 'error' => $error],
             200,
             ['Content-type' => 'application/json'],
             JSON_UNESCAPED_UNICODE

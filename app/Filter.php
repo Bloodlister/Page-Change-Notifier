@@ -2,9 +2,10 @@
 
 namespace App;
 
-use App\CarRetriever\Factory;
-use App\CarRetriever\IRetriever;
-use App\CarValidator\MobileBG;
+use App\Car\Collection\Factory as CollectionFactory;
+use App\Car\Retriever\Factory;
+use App\Car\Retriever\IRetriever;
+use App\Car\Validator\MobileBG;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -25,7 +26,15 @@ class Filter extends Model
 
     public $carValidationClass = MobileBG::class;
 
-    protected $fillable = ['type', 'search_params'];
+    protected $fillable = ['user_id', 'type', 'search_params'];
+
+    protected static function boot() {
+        parent::boot();
+
+        self::created(function(Filter $model) {
+            $model->initiateFilter();
+        });
+    }
 
     public function user() {
         return $this->belongsTo(User::class, 'id');
@@ -36,13 +45,7 @@ class Filter extends Model
     }
 
     public function getSearchParamsAttribute() {
-        $search_params = json_decode($this->attributes['search_params'], true);
-
-        if ($this->type == "MobileBG" && $search_params['f9'] === 'BGN') {
-            $search_params['f9'] = 'лв.';
-        }
-
-        return $search_params;
+        return json_decode($this->attributes['search_params'], true);
     }
 
     /**
@@ -52,22 +55,11 @@ class Filter extends Model
         return $this->hasMany(Car::class, 'filter_id');
     }
 
-    protected static function boot() {
-        parent::boot();
-
-        self::created(function(Filter $model) {
-            $model->initiateFilter();
-        });
-    }
-
     protected function initiateFilter() {
         $carRetriever = $this->getRetriever($this->type);
         $searchParams = $this->search_params;
-        if ($this->type && $searchParams['f9'] != 'лв.' && $this->attributes['search_params']['f9'] == 'BGN') {
-            $searchParams['f9'] = 'лв.';
-        }
 
-        $collection = \App\CarCollection\Factory::get($this->type);
+        $collection = CollectionFactory::get($this->type);
         $collection->setSearchParams($searchParams);
         $initialCars = $carRetriever->getCars($collection, 1);
         $this->seenCars()->saveMany($initialCars);
