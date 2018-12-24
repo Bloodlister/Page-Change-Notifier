@@ -2,6 +2,7 @@
 
 namespace App;
 
+use ForceUTF8\Encoding;
 use Illuminate\Database\Eloquent\Model;
 
 /**

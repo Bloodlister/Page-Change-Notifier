@@ -64,7 +64,7 @@ class MobileBG extends Base {
     public function addNewCars(Collection $seenCars, Collection $newCars) {
         /** @var Car $newCar */
         foreach ($newCars as $newCar) {
-            if ($seenCars->contains($newCars->link)) {
+            if ($seenCars->contains($newCar->link)) {
                 if ($newCar->isTopOffer) {
                     $this->seenTopOfferCar = true;
                     continue;

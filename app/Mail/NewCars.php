@@ -16,14 +16,21 @@ class NewCars extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /** @var Collection $newCars */
+    private $newCars;
+
+    /** @var string $cssPath */
+    private $cssPath;
+
     /**
      * Create a new message instance.
      *
      * @param Collection $newCars
      */
-    public function __construct(Collection $newCars)
+    public function __construct(Collection $newCars, $cssPath = '')
     {
         $this->newCars = $newCars;
+        $this->cssPath = $cssPath;
     }
 
     /**
@@ -33,6 +40,13 @@ class NewCars extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.new_cars')->with('newCars', $this->newCars);
+        return $this->view('emails.new_cars')
+            ->with([
+                'newCars' => $this->newCars,
+                'cssPath' => $this->cssPath,
+            ])
+            ->withSwiftMessage(function(\Swift_Message $message) {
+                $message->getHeaders()->addTextHeader('Content-type', 'text/plain; charset=ISO-8859-1');
+            });
     }
 }

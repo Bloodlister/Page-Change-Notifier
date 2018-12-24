@@ -6,6 +6,7 @@ use App\Helpers\Request;
 use App\Car\Collection\Base;
 use Illuminate\Support\Collection;
 use App\Car\Decoder\Factory as DecoderFactory;
+use Mockery\Exception;
 
 class MobileBG extends Retriever {
     const IDENTIFIER = 'MobileBG';
