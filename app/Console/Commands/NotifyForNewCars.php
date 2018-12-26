@@ -18,7 +18,7 @@ class NotifyForNewCars extends Command
      *
      * @var string
      */
-    protected $signature = 'notifier:MobileBG {cssPath}';
+    protected $signature = 'notifier:MobileBG {cssPath?}';
 
     /**
      * The console command description.
@@ -62,10 +62,19 @@ class NotifyForNewCars extends Command
                 });
                 $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
+                $filter->seenCars()->saveMany([$this->newCars][0]);
             });
 
-            $newCarsMail = new NewCars($this->newCars, $this->argument('cssPath'));
-            Mail::to('bloodlisterer@gmail.com')->send($newCarsMail);
+            if ($this->newCars->isNotEmpty()) {
+                $cssPath = '';
+                if ($this->argument('cssPath') != '') {
+                    $cssPath = $this->argument('cssPath');
+                } else {
+                    $cssPath = env('APP_URL');
+                }
+                $newCarsMail = new NewCars($this->newCars, $cssPath);
+                Mail::to('bloodlisterer@gmail.com')->send($newCarsMail);
+            }
         });
     }
 }

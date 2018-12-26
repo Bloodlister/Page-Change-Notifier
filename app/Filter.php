@@ -8,6 +8,7 @@ use App\Car\Retriever\IRetriever;
 use App\Car\Validator\MobileBG;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class Filter
@@ -86,5 +87,22 @@ class Filter extends Model
             $carLinks->push($car->link);
         }
         return $carLinks;
+    }
+
+    public function removeOldCars() {
+        $cars = $this->seenCars()->get();
+        if ($cars->count() > 50) {
+            $carsToRemove = [];
+            foreach ($cars as $car) {
+                static $delete = false;
+                if ($delete) {
+                    $carsToRemove[] = $car->id;
+                }
+                $delete = !$delete;
+            }
+
+            DB::table('cars')->whereIn('id', $carsToRemove)->delete();
+            $this->removeOldCars();
+        }
     }
 }

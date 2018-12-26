@@ -26,12 +26,23 @@ class Car extends Model
 
     protected $falseFields = ['title', 'image', 'desc', 'price', 'isTopOffer'];
 
+    protected $tempFieldHolder = [];
+
     protected static function boot() {
         parent::boot();
+
         self::saving(function($model) {
             /** @var Car $model */
             foreach ($model->falseFields as $falseField) {
+                $model->tempFieldHolder[$falseField] = $model->attributes[$falseField];
                 unset($model->attributes[$falseField]);
+            }
+        });
+
+        self::saved(function(Car $model) {
+            foreach ($model->falseFields as $falseField) {
+                $model->attributes[$falseField] = $model->tempFieldHolder[$falseField];
+                unset($model->tempFieldHolder[$falseField]);
             }
         });
     }

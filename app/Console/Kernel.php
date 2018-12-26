@@ -24,7 +24,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('notifier:newcars')->cron('*/3 * * * *');
+        $schedule->command('notifier:MobileBG ' . env('APP_URL'))->cron('*/3 * * * *');
+        $schedule->command('notifier:clearCars')->cron('0 */3 * * *');
     }
 
     /**
@@ -34,7 +35,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

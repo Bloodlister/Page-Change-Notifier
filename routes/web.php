@@ -17,6 +17,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/filters/create', 'FiltersController@create');
     Route::post('/filters/delete', 'FiltersController@delete');
 });
+
+Route::get('/', 'Auth\LoginController@login');
 Route::get('/logout', 'Auth\LoginController@logout');
 
 Route::get('/testMail', 'HomeController@test');
