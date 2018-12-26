@@ -25,7 +25,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('notifier:MobileBG ' . env('APP_URL'))->cron('*/3 * * * *');
-        $schedule->command('notifier:clearCars')->cron('0 */3 * * *');
+        $schedule->command('notifier:clearCars')->cron('*/30 * * * *');
     }
 
     /**

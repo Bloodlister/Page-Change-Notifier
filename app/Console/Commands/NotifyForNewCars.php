@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Car\Collection\MobileBG as MBGCollection;
 use App\Car\Retriever\MobileBG as MBGRetriever;
+use App\Console\Lockable;
 use App\Filter;
 use App\Mail\NewCars;
 use App\User;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Mail;
 
 class NotifyForNewCars extends Command
 {
+    use Lockable;
+
     /**
      * The name and signature of the console command.
      *
@@ -27,8 +30,15 @@ class NotifyForNewCars extends Command
      */
     protected $description = 'Sends the users the new cars in their specified filters';
 
-    /** @var Collection $newCars */
+    /**
+     * @var Collection $newCars
+     */
     private $newCars;
+
+    /**
+     * @var string $lockKey
+     */
+    private static $lockKey = 'GettingNewCars';
 
     /**
      * Create a new command instance.
@@ -47,6 +57,13 @@ class NotifyForNewCars extends Command
      */
     public function handle()
     {
+        if ($this->isLocked(static::$lockKey)) {
+            return;
+        }
+
+        $this->lock(static::$lockKey);
+
+        /** @var Collection $users */
         $users = User::where('id', '<>', '0')->get();
         $users->each(function(User $user) {
             //Resetting the new cars
@@ -66,15 +83,16 @@ class NotifyForNewCars extends Command
             });
 
             if ($this->newCars->isNotEmpty()) {
-                $cssPath = '';
                 if ($this->argument('cssPath') != '') {
                     $cssPath = $this->argument('cssPath');
                 } else {
                     $cssPath = env('APP_URL');
                 }
                 $newCarsMail = new NewCars($this->newCars, $cssPath);
-                Mail::to('bloodlisterer@gmail.com')->send($newCarsMail);
+                Mail::to($user->email)->send($newCarsMail);
             }
         });
+
+        $this->unlock(static::$lockKey);
     }
 }

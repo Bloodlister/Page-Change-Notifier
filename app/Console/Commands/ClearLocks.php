@@ -2,25 +2,24 @@
 
 namespace App\Console\Commands;
 
-use App\Filter;
-use App\User;
 use Illuminate\Console\Command;
+use Illuminate\Filesystem\Filesystem;
 
-class ClearCars extends Command
+class ClearLocks extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'notifier:clearCars';
+    protected $signature = 'clearLocks';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Removes old cars for the records to keep things speedy';
+    protected $description = 'Removes all the locks in the app/locks folder';
 
     /**
      * Create a new command instance.
@@ -39,11 +38,7 @@ class ClearCars extends Command
      */
     public function handle()
     {
-        $users = User::where('id', '<>', '0')->get();
-        $users->each(function(User $user) {
-            $user->filters()->each(function (Filter $filter) {
-                $filter->removeOldCars();
-            });
-        });
+        $fileSys = new Filesystem();
+        $fileSys->cleanDirectory('storage/app/locks');
     }
 }
