@@ -110,8 +110,6 @@ class NotifyForNewCars extends Command
             }
             $newCarsMail = new NewCars($this->newCars, $cssPath);
             Mail::to($user->email)->sendNow($newCarsMail);
-        } else {
-            var_dump('empty');
         }
     }
 }
