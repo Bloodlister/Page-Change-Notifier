@@ -10,6 +10,7 @@ use App\Mail\NewCars;
 use App\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class NotifyForNewCars extends Command
@@ -60,6 +61,7 @@ class NotifyForNewCars extends Command
         if ($this->isLocked(static::$lockKey)) {
             return;
         }
+        Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
 
         $this->lock(static::$lockKey);
 
@@ -107,7 +109,9 @@ class NotifyForNewCars extends Command
                 $cssPath = env('APP_URL');
             }
             $newCarsMail = new NewCars($this->newCars, $cssPath);
-            Mail::to($user->email)->send($newCarsMail);
+            Mail::to($user->email)->sendNow($newCarsMail);
+        } else {
+            var_dump('empty');
         }
     }
 }
