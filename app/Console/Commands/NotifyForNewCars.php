@@ -71,7 +71,8 @@ class NotifyForNewCars extends Command
             $retriever = new MBGRetriever();
             $collection = new MBGCollection();
 
-            $user->filters()->each(function (Filter $filter) use ($retriever, $collection) {
+            $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
+                static $counter = 0;
                 $collection->setSearchParams($filter->search_params);
                 $seenCarLinks = collect();
                 $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
@@ -80,19 +81,33 @@ class NotifyForNewCars extends Command
                 $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
                 $filter->seenCars()->saveMany([$this->newCars][0]);
+
+                $counter++;
+                if ($counter >= 40) {
+                    $this->sendEmailWithCurrentNewCars($user);
+                    $this->newCars = collect();
+                    $counter = 0;
+                }
             });
 
             if ($this->newCars->isNotEmpty()) {
-                if ($this->argument('cssPath') != '') {
-                    $cssPath = $this->argument('cssPath');
-                } else {
-                    $cssPath = env('APP_URL');
-                }
-                $newCarsMail = new NewCars($this->newCars, $cssPath);
-                Mail::to($user->email)->send($newCarsMail);
+                $this->sendEmailWithCurrentNewCars($user);
+                $this->newCars = collect();
             }
         });
 
         $this->unlock(static::$lockKey);
+    }
+
+    private function sendEmailWithCurrentNewCars(User $user) {
+        if ($this->newCars->isNotEmpty()) {
+            if ($this->argument('cssPath') != '') {
+                $cssPath = $this->argument('cssPath');
+            } else {
+                $cssPath = env('APP_URL');
+            }
+            $newCarsMail = new NewCars($this->newCars, $cssPath);
+            Mail::to($user->email)->send($newCarsMail);
+        }
     }
 }
