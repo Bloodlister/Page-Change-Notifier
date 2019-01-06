@@ -75,6 +75,7 @@ class NotifyForNewCars extends Command
             $collection = new MBGCollection();
 
             $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
+                static $counter = 0;
                 $collection->setSlink(false);
                 $collection->setSearchParams($filter->search_params);
                 $seenCarLinks = collect();
@@ -87,9 +88,19 @@ class NotifyForNewCars extends Command
 
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
                 $filter->seenCars()->saveMany([$this->newCars][0]);
+
+                $counter++;
+                if ($counter >= 100) {
+                    $this->sendEmailWithCurrentNewCars($user);
+                    $this->newCars = collect();
+                    $counter = 0;
+                }
             });
 
-            $this->sendEmailWithCurrentNewCars($user);
+            if ($this->newCars->isNotEmpty()) {
+                $this->sendEmailWithCurrentNewCars($user);
+                $this->newCars = collect();
+            }
         });
 
         $this->unlock(static::$lockKey);
