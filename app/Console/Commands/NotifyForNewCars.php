@@ -62,7 +62,7 @@ class NotifyForNewCars extends Command
 //        if ($this->isLocked(static::$lockKey)) { return; }
         Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
 
-        $this->lock(static::$lockKey);
+//        $this->lock(static::$lockKey);
 
         /** @var Collection $users */
         $users = User::where('id', '<>', '0')->get();
