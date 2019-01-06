@@ -60,10 +60,9 @@ class NotifyForNewCars extends Command
     public function handle()
     {
 //        if ($this->isLocked(static::$lockKey)) { return; }
-        Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
-
 //        $this->lock(static::$lockKey);
 
+        Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
         /** @var Collection $users */
         $users = User::where('id', '<>', '0')->get();
         $users->each(function(User $user) {
@@ -85,7 +84,7 @@ class NotifyForNewCars extends Command
                 $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
 
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
-                $filter->seenCars()->saveMany([$this->newCars][0]);
+                $filter->seenCars()->saveMany($this->newCars);
 
                 $counter++;
                 if ($counter >= 100) {

@@ -93,8 +93,8 @@ class Filter extends Model
         $cars = $this->seenCars()->get();
         if ($cars->count() > 50) {
             $carsToRemove = [];
+            $delete = false;
             foreach ($cars as $car) {
-                static $delete = false;
                 if ($delete) {
                     $carsToRemove[] = $car->id;
                 }
@@ -102,7 +102,6 @@ class Filter extends Model
             }
 
             DB::table('cars')->whereIn('id', $carsToRemove)->delete();
-            $this->removeOldCars();
         }
     }
 }
