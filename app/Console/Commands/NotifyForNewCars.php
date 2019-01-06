@@ -75,6 +75,7 @@ class NotifyForNewCars extends Command
 
             $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
                 static $counter = 0;
+                $collection->setSlink(false);
                 $collection->setSearchParams($filter->search_params);
                 $seenCarLinks = collect();
                 $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
