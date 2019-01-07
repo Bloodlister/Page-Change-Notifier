@@ -33,19 +33,14 @@ class NotifyForNewCars extends Command
     protected $description = 'Sends the users the new cars in their specified filters';
 
     /**
-     * @var Collection $allNewCars
-     */
-    private $allNewCars;
-
-    /**
      * @var Collection $newCars
      */
     private $newCars;
 
-//    /**
-//     * @var string $lockKey
-//     */
-//    private static $lockKey = 'GettingNewCars';
+    /**
+     * @var string $lockKey
+     */
+    private static $lockKey = 'GettingNewCars';
 
     /**
      * Create a new command instance.
@@ -64,8 +59,8 @@ class NotifyForNewCars extends Command
      */
     public function handle()
     {
-//        if ($this->isLocked(static::$lockKey)) { return; }
-//        $this->lock(static::$lockKey);
+        if ($this->isLocked(static::$lockKey)) { return; }
+        $this->lock(static::$lockKey);
 
         Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
         /** @var Collection $users */
@@ -77,30 +72,26 @@ class NotifyForNewCars extends Command
             $collection = new MBGCollection();
 
             $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
-                try {
-                    static $counter = 0;
-                    $collection->setSlink(false);
-                    $collection->setSearchParams($filter->search_params);
-                    $seenCarLinks = collect();
-                    $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
-                        $seenCarLinks->push($car->link);
-                    });
+                static $counter = 0;
+                $collection->setSlink(false);
+                $collection->setSearchParams($filter->search_params);
+                $seenCarLinks = collect();
+                $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
+                    $seenCarLinks->push($car->link);
+                });
 
-                    $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
-                    $filter->seenCars()->saveMany($newCarsFromFilter);
+                $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
+                $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
 
-                    $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
+                $this->newCars = $this->newCars->concat($newCarsFromFilter);
+                $filter->seenCars()->saveMany($this->newCars);
 
-                    $this->allNewCars = $this->newCars->concat($newCarsFromFilter);
-                    $this->newCars = $this->newCars->concat($newCarsFromFilter);
-
-                    $counter++;
-                    if ($counter >= 100) {
-                        $this->sendEmailWithCurrentNewCars($user);
-                        $this->newCars = collect();
-                        $counter = 0;
-                    }
-                } catch (\Exception $e) {}
+                $counter++;
+                if ($counter >= 100) {
+                    $this->sendEmailWithCurrentNewCars($user);
+                    $this->newCars = collect();
+                    $counter = 0;
+                }
             });
 
             if ($this->newCars->isNotEmpty()) {
@@ -109,7 +100,7 @@ class NotifyForNewCars extends Command
             }
         });
 
-//        $this->unlock(static::$lockKey);
+        $this->unlock(static::$lockKey);
     }
 
     private function sendEmailWithCurrentNewCars(User $user) {
