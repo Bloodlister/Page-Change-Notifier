@@ -37,10 +37,10 @@ class NotifyForNewCars extends Command
      */
     private $newCars;
 
-    /**
-     * @var string $lockKey
-     */
-    private static $lockKey = 'GettingNewCars';
+//    /**
+//     * @var string $lockKey
+//     */
+//    private static $lockKey = 'GettingNewCars';
 
     /**
      * Create a new command instance.
@@ -59,8 +59,8 @@ class NotifyForNewCars extends Command
      */
     public function handle()
     {
-        if ($this->isLocked(static::$lockKey)) { return; }
-        $this->lock(static::$lockKey);
+//        if ($this->isLocked(static::$lockKey)) { return; }
+//        $this->lock(static::$lockKey);
 
         Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
         /** @var Collection $users */
@@ -84,7 +84,7 @@ class NotifyForNewCars extends Command
                 $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
 
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
-                $filter->seenCars()->saveMany($this->newCars);
+                $filter->seenCars()->saveMany($newCarsFromFilter);
 
                 $counter++;
                 if ($counter >= 100) {
@@ -100,7 +100,7 @@ class NotifyForNewCars extends Command
             }
         });
 
-        $this->unlock(static::$lockKey);
+//        $this->unlock(static::$lockKey);
     }
 
     private function sendEmailWithCurrentNewCars(User $user) {
