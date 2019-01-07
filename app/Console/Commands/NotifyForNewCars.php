@@ -33,6 +33,11 @@ class NotifyForNewCars extends Command
     protected $description = 'Sends the users the new cars in their specified filters';
 
     /**
+     * @var Collection $allNewCars
+     */
+    private $allNewCars;
+
+    /**
      * @var Collection $newCars
      */
     private $newCars;
@@ -72,26 +77,30 @@ class NotifyForNewCars extends Command
             $collection = new MBGCollection();
 
             $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
-                static $counter = 0;
-                $collection->setSlink(false);
-                $collection->setSearchParams($filter->search_params);
-                $seenCarLinks = collect();
-                $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
-                    $seenCarLinks->push($car->link);
-                });
+                try {
+                    static $counter = 0;
+                    $collection->setSlink(false);
+                    $collection->setSearchParams($filter->search_params);
+                    $seenCarLinks = collect();
+                    $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
+                        $seenCarLinks->push($car->link);
+                    });
 
-                $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
-                $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
+                    $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
+                    $filter->seenCars()->saveMany($newCarsFromFilter);
 
-                $this->newCars = $this->newCars->concat($newCarsFromFilter);
-                $filter->seenCars()->saveMany($newCarsFromFilter);
+                    $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
 
-                $counter++;
-                if ($counter >= 100) {
-                    $this->sendEmailWithCurrentNewCars($user);
-                    $this->newCars = collect();
-                    $counter = 0;
-                }
+                    $this->allNewCars = $this->newCars->concat($newCarsFromFilter);
+                    $this->newCars = $this->newCars->concat($newCarsFromFilter);
+
+                    $counter++;
+                    if ($counter >= 100) {
+                        $this->sendEmailWithCurrentNewCars($user);
+                        $this->newCars = collect();
+                        $counter = 0;
+                    }
+                } catch (\Exception $e) {}
             });
 
             if ($this->newCars->isNotEmpty()) {
@@ -117,7 +126,7 @@ class NotifyForNewCars extends Command
 
     private function filterOutSeenCars(Collection $newCarsFromFilter) {
         foreach ($newCarsFromFilter as $index => $newCarFromFilter) {
-            foreach ($this->newCars as $newCar) {
+            foreach ($this->allNewCars as $newCar) {
                 if ($newCar->link == $newCarFromFilter->link) {
                     unset($newCarsFromFilter[$index]);
                 }

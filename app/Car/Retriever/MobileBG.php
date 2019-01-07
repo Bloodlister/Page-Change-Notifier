@@ -69,8 +69,14 @@ class MobileBG extends Retriever {
         return DecoderFactory::get(static::IDENTIFIER)->getCars($resultsHTML);
     }
 
-    public function getSlink($searchParams) {
+    public function getSlink($searchParams, $repeat = 0) {
         $headers = $this->getHeaders($searchParams);
+        if (!isset($headers['location']) && $repeat < 5) {
+            $repeat += 1;
+            return $this->getSlink($searchParams, $repeat);
+        } else if (!isset($headers['location']) && $repeat >= 5) {
+            throw new \Exception('a');
+        }
         foreach ($headers['location'] as $header) {
             if (!empty(preg_match('/slink=(.+)&/', $header, $matches))) {
                 return $matches[1];
