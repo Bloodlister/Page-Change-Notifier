@@ -82,10 +82,9 @@ class Filter extends Model
 
     public function getSeenCarLinks() : Collection {
         $carLinks = collect();
-        $seenCars = $this->seenCars();
-        foreach ($seenCars as $car) {
+        $this->seenCars()->get()->each(function($car) use ($carLinks) {
             $carLinks->push($car->link);
-        }
+        });
         return $carLinks;
     }
 

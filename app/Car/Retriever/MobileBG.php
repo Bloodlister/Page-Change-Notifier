@@ -62,7 +62,17 @@ class MobileBG extends Retriever {
      */
     private function getCarsFromSearch(Base $collection, $page) {
         if (!$collection->getSlink()) {
-            $collection->setSlink($this->getSlink($collection->getSearchParams()));
+            $slink = $this->getSlink($collection->getSearchParams());
+            while (!is_string($slink)) {
+                static $count = 0;
+                $count++;
+                if ($count > 5) {
+                    throw new \Exception("Could not get slink");
+                }
+
+                $slink = $this->getSlink($collection->getSearchParams());
+            }
+            $collection->setSlink($slink);
         }
 
         $resultsHTML = $this->getCarsHTMLFromSlink($collection->getSlink(), $page);

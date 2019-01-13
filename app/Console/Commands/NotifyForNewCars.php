@@ -38,6 +38,11 @@ class NotifyForNewCars extends Command
     private $newCars;
 
     /**
+     * @var Collection $allNewCars
+     */
+    private $allNewCars;
+
+    /**
      * @var string $lockKey
      */
     private static $lockKey = 'GettingNewCars';
@@ -59,35 +64,41 @@ class NotifyForNewCars extends Command
      */
     public function handle()
     {
-        if ($this->isLocked(static::$lockKey)) { return; }
-        $this->lock(static::$lockKey);
+//        if ($this->isLocked(static::$lockKey)) { return; }
+//        $this->lock(static::$lockKey);
 
         Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
         /** @var Collection $users */
-        $users = User::where('id', '<>', '0')->get();
+        $users = User::all();
+
         $users->each(function(User $user) {
             //Resetting the new cars
+            $this->allNewCars = collect();
             $this->newCars = collect();
             $retriever = new MBGRetriever();
             $collection = new MBGCollection();
 
+            //Looping though all users
             $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
-                static $counter = 0;
-                $collection->setSlink(false);
-                $collection->setSearchParams($filter->search_params);
-                $seenCarLinks = collect();
-                $filter->seenCars()->get()->each(function($car) use ($seenCarLinks) {
-                    $seenCarLinks->push($car->link);
-                });
+                $collection->setSearchParams($filter->search_params); // Setting search params to the collection
+                $collection->setSlink(false); // Resetting the slink
 
+                $seenCarLinks = $filter->getSeenCarLinks();
+
+//                $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
+//                $this->allNewCars = $this->allNewCars->concat($this->newCars);
                 $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
-                $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
+                $filter->seenCars()->saveMany($newCarsFromFilter);
 
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
-                $filter->seenCars()->saveMany($this->newCars);
 
+                if ($this->newCars->isNotEmpty()) {
+                    $filter->seenCars()->saveMany($this->newCars);
+                }
+
+                static $counter = 0;
                 $counter++;
-                if ($counter >= 100) {
+                if ($counter > 100) {
                     $this->sendEmailWithCurrentNewCars($user);
                     $this->newCars = collect();
                     $counter = 0;
@@ -100,7 +111,7 @@ class NotifyForNewCars extends Command
             }
         });
 
-        $this->unlock(static::$lockKey);
+//        $this->unlock(static::$lockKey);
     }
 
     private function sendEmailWithCurrentNewCars(User $user) {
