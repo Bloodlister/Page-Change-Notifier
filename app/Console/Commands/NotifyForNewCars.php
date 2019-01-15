@@ -87,7 +87,8 @@ class NotifyForNewCars extends Command
 
                 $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
                 $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
-                $this->allNewCars = $this->allNewCars->concat($this->newCars);
+
+                $this->allNewCars = $this->allNewCars->concat($newCarsFromFilter);
                 $filter->seenCars()->saveMany($newCarsFromFilter);
 
                 $this->newCars = $this->newCars->concat($newCarsFromFilter);
