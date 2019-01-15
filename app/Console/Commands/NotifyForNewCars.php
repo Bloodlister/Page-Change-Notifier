@@ -88,13 +88,10 @@ class NotifyForNewCars extends Command
                 $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
                 $newCarsFromFilter = $this->filterOutSeenCars($newCarsFromFilter);
 
-                $this->allNewCars = $this->allNewCars->concat($newCarsFromFilter);
-                $filter->seenCars()->saveMany($newCarsFromFilter);
-
-                $this->newCars = $this->newCars->concat($newCarsFromFilter);
-
-                if ($this->newCars->isNotEmpty()) {
-                    $filter->seenCars()->saveMany($this->newCars);
+                if ($newCarsFromFilter->isNotEmpty()) {
+                    $this->allNewCars = $this->allNewCars->concat($newCarsFromFilter);
+                    $this->newCars = $this->newCars->concat($newCarsFromFilter);
+                    $filter->seenCars()->saveMany($newCarsFromFilter);
                 }
 
                 static $counter = 0;
