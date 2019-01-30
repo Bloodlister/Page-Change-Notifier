@@ -1,14 +1,11 @@
 <template>
     <div class="search">
         <div class="row">
-            <brand-model :storage="storage"
-                    :data="this.inputs.brandOptions"/>
+            <brand-model :storage="storage" :data="this.inputs.brandOptions"/>
         </div>
         <div class="column">
 
-            <currency :storage="storage" 
-                    :dropdownData="inputs.price.dropdownData" 
-                    :scopeData="inputs.price.scopeData" />
+            <currency :storage="storage" :dropdownData="inputs.price.dropdownData" :scopeData="inputs.price.scopeData" />
 
             <between-numbers v-for="(between, index) in inputs.betweens" 
                             v-bind:key="index"
@@ -23,12 +20,12 @@
 
 
 <script>
-import Dropdown from '../input/Dropdown.vue';
-import Currency from '../input/Currency.vue';
-import BetweenNumbers from '../input/BetweenNumbers.vue';
-import Checkbox from '../input/Checkbox.vue';
-import Inputs from './data/MobileBG.js';
-import BrandModel from '../input/BrandModel.vue';
+import Dropdown from '../input/MobileBGCars/Dropdown.vue';
+import Currency from '../input/MobileBGCars/Currency.vue';
+import BetweenNumbers from '../input/MobileBGCars/BetweenNumbers.vue';
+import Checkbox from '../input/MobileBGCars/Checkbox.vue';
+import Inputs from './data/MobileBGCars.js';
+import BrandModel from '../input/MobileBGCars/BrandModel.vue';
 
 export default {
     name: 'MobileBGCars',
@@ -50,7 +47,6 @@ export default {
     },
     data: function() {
         return {
-            target: "https://www.mobile.bg/pcgi/mobile.cgi",
             storage: Inputs.requiredFields,
             inputs: Inputs,
         };
