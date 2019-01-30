@@ -50732,8 +50732,8 @@ module.exports = function listToStyles (parentId, list) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBG_vue__ = __webpack_require__(53);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBG_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__searches_MobileBG_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue__ = __webpack_require__(97);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_CarsBG_vue__ = __webpack_require__(74);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_CarsBG_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__searches_CarsBG_vue__);
 //
@@ -50775,13 +50775,13 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony default export */ __webpack_exports__["default"] = ({
     name: 'Wrapper',
     components: {
-        MobileBG: __WEBPACK_IMPORTED_MODULE_0__searches_MobileBG_vue___default.a,
+        MobileBG: __WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue___default.a,
         CarsBG: __WEBPACK_IMPORTED_MODULE_1__searches_CarsBG_vue___default.a
     },
     data: function data() {
         return {
             index: 0,
-            searches: [__WEBPACK_IMPORTED_MODULE_0__searches_MobileBG_vue___default.a, __WEBPACK_IMPORTED_MODULE_1__searches_CarsBG_vue___default.a],
+            searches: [__WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue___default.a, __WEBPACK_IMPORTED_MODULE_1__searches_CarsBG_vue___default.a],
             message: '',
             error: ''
         };
@@ -50811,133 +50811,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 53 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-var normalizeComponent = __webpack_require__(1)
-/* script */
-var __vue_script__ = __webpack_require__(54)
-/* template */
-var __vue_template__ = __webpack_require__(73)
-/* template functional */
-var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = null
-/* scopeId */
-var __vue_scopeId__ = null
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/js/components/searches/MobileBG.vue"
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-478ef936", Component.options)
-  } else {
-    hotAPI.reload("data-v-478ef936", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 54 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue__ = __webpack_require__(16);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_Currency_vue__ = __webpack_require__(57);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_Currency_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_Currency_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue__ = __webpack_require__(17);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue__ = __webpack_require__(64);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBG_js__ = __webpack_require__(69);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue__ = __webpack_require__(70);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue__);
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-
-
-
-
-
-
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    name: 'MobileBG',
-    components: {
-        BetweenNumbers: __WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue___default.a,
-        Checkbox: __WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue___default.a,
-        Dropdown: __WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue___default.a,
-        Currency: __WEBPACK_IMPORTED_MODULE_1__input_Currency_vue___default.a,
-        BrandModel: __WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue___default.a
-    },
-    methods: {
-        passToParent: function passToParent() {
-            this.$emit('passData', {
-                type: "MobileBG",
-                data: this.storage
-            });
-        }
-    },
-    data: function data() {
-        return {
-            target: "https://www.mobile.bg/pcgi/mobile.cgi",
-            storage: __WEBPACK_IMPORTED_MODULE_4__data_MobileBG_js__["a" /* default */].requiredFields,
-            inputs: __WEBPACK_IMPORTED_MODULE_4__data_MobileBG_js__["a" /* default */]
-        };
-    }
-});
-
-/***/ }),
+/* 53 */,
+/* 54 */,
 /* 55 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -51636,12 +51511,6 @@ var requiredFields = {
     topmenu: [{
         hrefValue: 1,
         label: 'Cars and Jeeps'
-    }, {
-        hrefValue: 3,
-        label: 'Buses'
-    }, {
-        hrefValue: 5,
-        label: 'Motorbikes'
     }],
     brandOptions: {
         hrefValues: {
@@ -51895,81 +51764,7 @@ if (false) {
 }
 
 /***/ }),
-/* 73 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "search" }, [
-    _c(
-      "div",
-      { staticClass: "row" },
-      [
-        _c(
-          "dropdown",
-          {
-            attrs: { default: "1", hrefValue: "topmenu", storage: _vm.storage }
-          },
-          _vm._l(this.inputs.topmenu, function(option, index) {
-            return _c(
-              "option",
-              { key: index, domProps: { value: option.hrefValue } },
-              [_vm._v(_vm._s(option.label))]
-            )
-          }),
-          0
-        ),
-        _vm._v(" "),
-        _c("brand-model", {
-          attrs: { storage: _vm.storage, data: this.inputs.brandOptions }
-        })
-      ],
-      1
-    ),
-    _vm._v(" "),
-    _c(
-      "div",
-      { staticClass: "column" },
-      [
-        _c("currency", {
-          attrs: {
-            storage: _vm.storage,
-            dropdownData: _vm.inputs.price.dropdownData,
-            scopeData: _vm.inputs.price.scopeData
-          }
-        }),
-        _vm._v(" "),
-        _vm._l(_vm.inputs.betweens, function(between, index) {
-          return _c("between-numbers", {
-            key: index,
-            attrs: {
-              storage: _vm.storage,
-              label: between.label,
-              hrefValues: between.hrefValues,
-              extraData: between.extraData
-            }
-          })
-        })
-      ],
-      2
-    ),
-    _vm._v(" "),
-    _c("button", { on: { click: _vm.passToParent } }, [_vm._v("Listen")])
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-478ef936", module.exports)
-  }
-}
-
-/***/ }),
+/* 73 */,
 /* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -52087,7 +51882,7 @@ var render = function() {
                 [_vm._v("◄")]
               ),
               _vm._v(" "),
-              _c("h1", [_vm._v(_vm._s(_vm.currentSearch.name))]),
+              _c("h1", [_vm._v(_vm._s(_vm.currentSearch.title))]),
               _vm._v(" "),
               _c(
                 "button",
@@ -52727,6 +52522,192 @@ if (false) {
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
+
+/***/ }),
+/* 94 */,
+/* 95 */,
+/* 96 */,
+/* 97 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(1)
+/* script */
+var __vue_script__ = __webpack_require__(98)
+/* template */
+var __vue_template__ = __webpack_require__(99)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/searches/MobileBGCars.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-66218ca4", Component.options)
+  } else {
+    hotAPI.reload("data-v-66218ca4", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 98 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue__ = __webpack_require__(16);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_Currency_vue__ = __webpack_require__(57);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_Currency_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_Currency_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue__ = __webpack_require__(17);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue__ = __webpack_require__(64);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBG_js__ = __webpack_require__(69);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue__ = __webpack_require__(70);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue__);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+
+
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: 'MobileBGCars',
+    title: 'MobileBG Cars',
+    components: {
+        BetweenNumbers: __WEBPACK_IMPORTED_MODULE_2__input_BetweenNumbers_vue___default.a,
+        Checkbox: __WEBPACK_IMPORTED_MODULE_3__input_Checkbox_vue___default.a,
+        Dropdown: __WEBPACK_IMPORTED_MODULE_0__input_Dropdown_vue___default.a,
+        Currency: __WEBPACK_IMPORTED_MODULE_1__input_Currency_vue___default.a,
+        BrandModel: __WEBPACK_IMPORTED_MODULE_5__input_BrandModel_vue___default.a
+    },
+    methods: {
+        passToParent: function passToParent() {
+            this.$emit('passData', {
+                type: "MobileBG",
+                data: this.storage
+            });
+        }
+    },
+    data: function data() {
+        return {
+            target: "https://www.mobile.bg/pcgi/mobile.cgi",
+            storage: __WEBPACK_IMPORTED_MODULE_4__data_MobileBG_js__["a" /* default */].requiredFields,
+            inputs: __WEBPACK_IMPORTED_MODULE_4__data_MobileBG_js__["a" /* default */]
+        };
+    }
+});
+
+/***/ }),
+/* 99 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", { staticClass: "search" }, [
+    _c(
+      "div",
+      { staticClass: "row" },
+      [
+        _c("brand-model", {
+          attrs: { storage: _vm.storage, data: this.inputs.brandOptions }
+        })
+      ],
+      1
+    ),
+    _vm._v(" "),
+    _c(
+      "div",
+      { staticClass: "column" },
+      [
+        _c("currency", {
+          attrs: {
+            storage: _vm.storage,
+            dropdownData: _vm.inputs.price.dropdownData,
+            scopeData: _vm.inputs.price.scopeData
+          }
+        }),
+        _vm._v(" "),
+        _vm._l(_vm.inputs.betweens, function(between, index) {
+          return _c("between-numbers", {
+            key: index,
+            attrs: {
+              storage: _vm.storage,
+              label: between.label,
+              hrefValues: between.hrefValues,
+              extraData: between.extraData
+            }
+          })
+        })
+      ],
+      2
+    ),
+    _vm._v(" "),
+    _c("button", { on: { click: _vm.passToParent } }, [_vm._v("Listen")])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-66218ca4", module.exports)
+  }
+}
 
 /***/ })
 /******/ ]);

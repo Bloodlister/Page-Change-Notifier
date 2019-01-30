@@ -4,7 +4,7 @@
             <div>
                 <div class="searchNavigation">
                     <button v-on:click="index != 0 ? index-- : index++">◄</button>
-                    <h1>{{currentSearch.name}}</h1>
+                    <h1>{{currentSearch.title}}</h1>
                     <button v-on:click="index++">►</button>
                 </div>
                 <keep-alive>
@@ -31,7 +31,7 @@
 
 
 <script>
-import MobileBG from './searches/MobileBG.vue';
+import MobileBG from './searches/MobileBGCars.vue';
 import CarsBG from './searches/CarsBG.vue';
 
 export default {

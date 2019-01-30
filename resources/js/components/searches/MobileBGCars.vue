@@ -1,11 +1,6 @@
 <template>
     <div class="search">
         <div class="row">
-            <dropdown default="1" hrefValue="topmenu" :storage="storage">
-                <option v-for="(option, index) in this.inputs.topmenu" :key="index" 
-                    :value="option.hrefValue">{{ option.label }}</option>
-            </dropdown>
-
             <brand-model :storage="storage"
                     :data="this.inputs.brandOptions"/>
         </div>
@@ -36,7 +31,8 @@ import Inputs from './data/MobileBG.js';
 import BrandModel from '../input/BrandModel.vue';
 
 export default {
-    name: 'MobileBG',
+    name: 'MobileBGCars',
+    title: 'MobileBG Cars',
     components: {
         BetweenNumbers,
         Checkbox,

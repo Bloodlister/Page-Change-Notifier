@@ -179,14 +179,6 @@ export default {
             hrefValue: 1,
             label: 'Cars and Jeeps',
         },
-        {
-            hrefValue: 3,
-            label: 'Buses',
-        },
-        {
-            hrefValue: 5,
-            label: 'Motorbikes',
-        },
     ],
     brandOptions: {
         hrefValues: {
