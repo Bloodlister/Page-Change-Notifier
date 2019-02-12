@@ -1,15 +1,15 @@
 <template>
     <div class="search">
         Brand:
-        <select v-model="selectedBrand" @click="setBrand">
-            <option value=""></option>
-            <option v-for="(brandOption, index) in Object.keys(this.brands)"
+        <select v-model="selectedBrand" @change="setBrand">
+            <option selected disabled style="display: none;"></option>
+            <option v-for="(brandOption, index) in this.brands"
                     :key="index"
-                    :value="brandOption">{{ brandOption }}</option>
+                    :value="index">{{ brandOption }}</option>
         </select>
 
         Model:
-        <select v-model="selectedModel" @click="setModel">
+        <select v-model="selectedModel" @change="setModel">
             <option value=""></option>
             <option v-for="(modelOption, index) in modelsForBrand"
                     :key="index"
@@ -20,20 +20,21 @@
 
 <script>
 export default {
-    props: ['brands'],
-    data: function() {
+    props: ['storage', 'brands'],
+    data() {
         return {
-            selectedBrand: '',
-            models: {}
+            selectedBrand: null,
+            selectedModel: null,
+            modelsForBrand: {}
         }
-    },
-    mounted: function() {
-        console.log(this.brands);
     },
     methods: {
         setBrand: function(event) {
-            this.storage[this.data.hrefValues.brand] = event.target.value;
-            this.storage[this.data.hrefValues.model] = '';
+            this.storage['brandId'] = event.target.value;
+            this.$http.get();
+        },
+        setModel: function(event) {
+            console.log(event);
         }
     }
 }
