@@ -64,8 +64,8 @@ class NotifyForNewCars extends Command
      */
     public function handle()
     {
-//        if ($this->isLocked(static::$lockKey)) { return; }
-//        $this->lock(static::$lockKey);
+        //if ($this->isLocked(static::$lockKey)) { return; }
+        //$this->lock(static::$lockKey);
 
         Log::info('Start: ' . (new \DateTime())->format('Y-m-d H:i:s'));
         /** @var Collection $users */
@@ -109,7 +109,7 @@ class NotifyForNewCars extends Command
             }
         });
 
-//        $this->unlock(static::$lockKey);
+        //$this->unlock(static::$lockKey);
     }
 
     private function sendEmailWithCurrentNewCars(User $user) {
