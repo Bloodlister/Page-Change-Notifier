@@ -7,5 +7,6 @@ use App\Helpers\FactoryBase;
 class Factory extends FactoryBase {
     protected static $map = [
         MobileBG::IDENTIFIER => MobileBG::class,
+        CarsBg::IDENTIFIER => CarsBg::class,
     ];
 }
