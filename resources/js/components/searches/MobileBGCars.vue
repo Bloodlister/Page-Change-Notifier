@@ -14,7 +14,7 @@
                             :hrefValues="between.hrefValues"
                             :extraData="between.extraData"/>
         </div>
-        <button v-on:click="passToParent">Listen</button>
+        <button v-on:click="passToParent">Create filter</button>
     </div>
 </template>
 
@@ -38,7 +38,7 @@ export default {
         BrandModel,
     },
     methods: {
-        passToParent: function() {
+        passToParent() {
             this.$emit('passData', {
                 type: "MobileBG",
                 data: this.storage

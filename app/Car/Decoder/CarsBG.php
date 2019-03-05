@@ -22,7 +22,7 @@ class CarsBG extends Decoder {
                     $models[$modelId] = $model;
                 }
             });
-        } catch (Exception $e) {}
+        } catch (\Exception $e) {}
 
         return $models;
     }

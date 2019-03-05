@@ -8,7 +8,7 @@
                     <button v-on:click="index++">►</button>
                 </div>
                 <keep-alive>
-                    <component :is="currentSearch" v-on:passData="createListen"></component>
+                    <component :is="currentSearch" v-on:passData="createFilter"></component>
                 </keep-alive>
                 <div class="message">
                     <div v-if="message !== ''" 
@@ -54,7 +54,7 @@ export default {
         }
     },
     methods: {
-        createListen: function(data) {
+        createFilter: function(data) {
             this.$http.post('/filters/create', data)
             .then(resp => {
                 this.message = "Success";
