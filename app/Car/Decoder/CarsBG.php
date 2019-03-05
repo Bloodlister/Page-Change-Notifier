@@ -14,13 +14,15 @@ class CarsBG extends Decoder {
         $models = collect();
 
         $crawler = new Crawler($html);
-        $crawler->filter('li')->each(function(Crawler $item) use (&$models) {
-            $model = $item->filter('label')->first()->text();
-            $modelId = $item->filter('input')->first()->attr('value');
-            if (is_numeric($modelId)) {
-                $models[$modelId] = $model;
-            }
-        });
+        try {
+              $crawler->filter('li')->each(function(Crawler $item) use (&$models) {
+                $model = $item->filter('label')->first()->text();
+                $modelId = $item->filter('input')->first()->attr('value');
+                if (is_numeric($modelId)) {
+                    $models[$modelId] = $model;
+                }
+            });
+        } catch (Exception $e) {}
 
         return $models;
     }
