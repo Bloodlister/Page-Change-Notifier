@@ -13,8 +13,7 @@ class MobileBG extends Decoder {
     protected function getCarsHTMLFromPage(string $html) : Collection {
         $crawler = new Crawler($html);
         $carsTables = collect();
-        $crawler->filter('form[name="search"]')->first()->filter('table')->each(function($table) use ($carsTables) {
-            /** @var Crawler $table */
+        $crawler->filter('form[name="search"]')->first()->filter('table')->each(function(Crawler $table) use ($carsTables) {
             if ($table->filter('tr')->count() > 6) {
                 $carsTables->push($table->html());
             }
