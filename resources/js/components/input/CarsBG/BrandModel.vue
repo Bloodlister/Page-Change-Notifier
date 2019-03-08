@@ -3,13 +3,12 @@
         <div>
             Brand:
             <select v-model="selectedBrand" @change="setBrand">
-                <option selected disabled style="display: none;"></option>
                 <option v-for="(brandOption, index) in this.brands"
                         :key="index"
                         :value="index">{{ brandOption }}</option>
             </select>
         </div>
-        <div>
+        <div v-if="models && Object.keys(models).length > 0">
             Models: |
             <button class="btn btn-sm btn-info pull-right" @click="modelsVisible = !modelsVisible">Hide models</button>
             <div class="three-on-row" v-show="modelsVisible">
@@ -23,6 +22,9 @@
                 </div>
             </div>
         </div>
+        <div v-else-if="models !== false">
+            No models . . .
+        </div>
     </div>
 </template>
 
@@ -33,20 +35,22 @@ export default {
         return {
             selectedBrand: null,
             selectedModel: null,
-            models: {},
+            models: false,
             modelsVisible: true,
         }
     },
     methods: {
-        setBrand: function(event) {
+        setBrand(event) {
             this.storage['brandId'] = event.target.value;
             this.storage['models'] = [];
-
-            this.$http.get('/carsbg/models?brandId=' + this.storage['brandId']).then(resp => {
-                this.models = resp.data.models;
-            });
+            if(event.target.value !== '0') {
+                this.$http.get('/carsbg/models?brandId=' + this.storage['brandId']).then(resp => {
+                    this.modelsVisible = true;
+                    this.models = resp.data.models;
+                });
+            }
         },
-        checkModel: function (event) {
+        checkModel(event) {
             event.target.firstChild.checked = !event.target.firstChild.checked;
             event.target.firstChild.dispatchEvent(new Event('change'))
         },
