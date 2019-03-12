@@ -31,7 +31,10 @@ class CarsBG extends Decoder {
         $crawler = new Crawler($pageHTML);
         $carsTables = collect();
 
-        $crawler->filter('.tableListResults tbody tr')->each(function(Crawler $row) use ($carsTables) {
+        $crawler->filter('.tableListResults')->first()->filter('tr')->each(function(Crawler $row) use ($carsTables) {
+            $isAd = (bool)$row->filter('#subscriptionPromoContainer')->count();
+            if ($isAd) { return; }
+
             if($row->filter('td')->count() >= 5) {
                 $carsTables->push($row->html());
             }
@@ -44,16 +47,18 @@ class CarsBG extends Decoder {
         $crawler = new Crawler($html);
         $car = new Car();
 
-        $index = 0;
+        $index = 1;
         $crawler->filter('td')->each(function(Crawler $field) use (&$car, &$index) {
             $method = 'container_' . $index;
 
             if(method_exists($this, $method)) {
-                $this->$method($car, $index);
+                $this->$method($car, $field);
             }
 
             $index++;
         });
+
+        return $car;
     }
 
     private function container_1(Car &$car, Crawler $crawler) {
@@ -62,7 +67,7 @@ class CarsBG extends Decoder {
     }
 
     private function container_2(Car &$car, Crawler $crawler) {
-        $car->title = $this-getTitle($crawler);
+        $car->title = $this->getTitle($crawler);
         $car->desc = $this->getDesc($crawler);
     }
 
@@ -83,11 +88,17 @@ class CarsBG extends Decoder {
     }
 
     protected function getDesc(Crawler $crawler) {
-        return trim($crawler->filter('div')->first()->text());
+        $description = $crawler->filter('div');
+
+        if ($description->count() > 0) {
+            return trim($crawler->filter('div')->first()->text());
+        } else {
+            return '[ Няма описание. . . ]';
+        }
     }
 
     protected function getPrice(Crawler $crawler) {
-        return $crawler->text();
+        return trim(preg_replace('/\s+/', ' ', $crawler->text()));
     }
 
 }

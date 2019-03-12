@@ -6,26 +6,32 @@ use Illuminate\Support\Collection;
 
 class CarsBG extends Base {
 
-    public const IDENTIFIER = 'CarsBG';
+    public const IDENTIFIER = 'CarsBg';
 
-    /**
-     * Used to add the initial cars
-     * @param Collection $cars
-     * @return mixed
-     */
+    private $seenOldCar = false;
+
     public function addCars(Collection $cars) {
-        // TODO: Implement addCars() method.
+        foreach ($cars as $car) {
+            $this->cars->push($car);
+        }
     }
 
     public function addNewCars(Collection $seenCars, Collection $newCars) {
-        // TODO: Implement addNewCars() method.
+        foreach ($newCars as $newCar) {
+            if ($seenCars->contains($newCar->link)) {
+                $this->seenOldCar = true;
+                break;
+            }
+
+            $this->cars->push($newCar);
+        }
     }
 
     public function initialLimitReached() : bool {
-        // TODO: Implement initialLimitReached() method.
+        return $this->cars->count() >= self::INITIAL_CAR_LIMIT;
     }
 
     public function seenPreviousCars() : bool {
-        // TODO: Implement seenPreviousCars() method.
+        return $this->seenOldCar;
     }
 }

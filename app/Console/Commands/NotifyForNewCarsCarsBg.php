@@ -10,10 +10,10 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Car\Collection\MobileBG as MBGCollection;
-use App\Car\Retriever\MobileBG as MBGRetriever;
+use App\Car\Collection\CarsBg as CarsBGCollection;
+use App\Car\Retriever\CarsBg as CarsBGRetriever;
 
-class NotifyForNewCars extends Command
+class NotifyForNewCarsCarsBg extends Command
 {
     use Lockable;
 
@@ -22,7 +22,7 @@ class NotifyForNewCars extends Command
      *
      * @var string
      */
-    protected $signature = 'notifier:MobileBG {cssPath?}';
+    protected $signature = 'notifier:CarsBG {cssPath?}';
 
     /**
      * The console command description.
@@ -44,7 +44,7 @@ class NotifyForNewCars extends Command
     /**
      * @var string $lockKey
      */
-    private static $lockKey = 'GettingNewCars';
+    private static $lockKey = 'GettingNewCars_CarsBG';
 
     /**
      * Create a new command instance.
@@ -66,14 +66,12 @@ class NotifyForNewCars extends Command
             //Resetting the new cars
             $this->allNewCars = collect();
             $this->newCars = collect();
-            $retriever = new MBGRetriever();
-            $collection = new MBGCollection();
+            $retriever = new CarsBGRetriever();
+            $collection = new CarsBGCollection();
 
             //Looping though all users
             $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
                 $collection->setSearchParams($filter->search_params); // Setting search params to the collection
-                $collection->setSlink(false); // Resetting the slink
-
                 $seenCarLinks = $filter->getSeenCarLinks();
 
                 $newCarsFromFilter = $retriever->getNewCars($seenCarLinks, $collection, 1);
@@ -87,7 +85,7 @@ class NotifyForNewCars extends Command
 
                 static $counter = 0;
                 $counter++;
-                if ($counter > 100) {
+                if ($counter > 3) {
                     $this->sendEmailWithCurrentNewCars($user);
                     $this->newCars = collect();
                     $counter = 0;

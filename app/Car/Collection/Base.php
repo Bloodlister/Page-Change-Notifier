@@ -8,6 +8,8 @@ abstract class Base {
 
     const IDENTIFIER = null;
 
+    const INITIAL_CAR_LIMIT = 10;
+
     /** @var Collection $cars */
     protected $cars;
 
@@ -18,7 +20,6 @@ abstract class Base {
     /**
      * Used to add the initial cars
      * @param Collection $cars
-     * @return mixed
      */
     abstract public function addCars(Collection $cars);
 
