@@ -16,6 +16,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/filters/all', 'FiltersController@all');
     Route::post('/filters/create', 'FiltersController@create');
     Route::post('/filters/delete', 'FiltersController@delete');
+
+    Route::get('/carsbg/models', 'CarsBgController@getModels');
 });
 
 Route::get('/', 'Auth\LoginController@login');

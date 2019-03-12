@@ -34,15 +34,19 @@ class Car extends Model
         self::saving(function($model) {
             /** @var Car $model */
             foreach ($model->falseFields as $falseField) {
-                $model->tempFieldHolder[$falseField] = $model->attributes[$falseField];
-                unset($model->attributes[$falseField]);
+                if (isset($model->attributes[$falseField])) {
+                    $model->tempFieldHolder[$falseField] = $model->attributes[$falseField];
+                    unset($model->attributes[$falseField]);
+                }
             }
         });
 
         self::saved(function(Car $model) {
             foreach ($model->falseFields as $falseField) {
-                $model->attributes[$falseField] = $model->tempFieldHolder[$falseField];
-                unset($model->tempFieldHolder[$falseField]);
+                if (isset($model->tempFieldHolder[$falseField])) {
+                    $model->attributes[$falseField] = $model->tempFieldHolder[$falseField];
+                    unset($model->tempFieldHolder[$falseField]);
+                }
             }
         });
     }

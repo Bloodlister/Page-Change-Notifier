@@ -14,7 +14,6 @@
 <style lang="sass">
     @import './../../sass/input.sass'
 
-
     #app
         font-family: "Avenir", Helvetica, Arial, sans-serif
         -webkit-font-smoothing: antialiased

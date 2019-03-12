@@ -8,6 +8,7 @@ class Factory extends FactoryBase {
 
     protected static $map = [
         MobileBG::IDENTIFIER => MobileBG::class,
+
     ];
 
     /**

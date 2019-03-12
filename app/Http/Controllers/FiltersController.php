@@ -25,16 +25,13 @@ class FiltersController extends Controller
     public function create(Request $request) {
         $success = true;
         $error = '';
-        try {
-            $filter = new Filter();
-            $filter->type = $request->post('type');
-            $filter->user_id = $request->user()->id;
-            $filter->search_params = $request->post('data');
-            $filter->save();
-        } catch (\Exception $exception) {
-            $success = false;
-            $error = $exception->getMessage();
-        }
+
+        $filter = new Filter();
+        $filter->type = $request->post('type');
+        $filter->user_id = $request->user()->id;
+        $filter->search_params = $request->post('data');
+        $filter->save();
+
         return response()->json(
             ['success' => $success, 'error' => $error],
             200,

@@ -9,8 +9,6 @@ class MobileBG extends Base {
 
     const IDENTIFIER = 'MobileBG';
 
-    const INITIAL_CAR_LIMIT = 10;
-
     /** @var Collection $topOfferCars */
     private $topOfferCars;
 

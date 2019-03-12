@@ -11,12 +11,6 @@ use Mockery\Exception;
 class MobileBG extends Retriever {
     const IDENTIFIER = 'MobileBG';
 
-    /**
-     * @param \App\Car\Collection\MobileBG|Base $collection
-     * @param int                              $page
-     * @return Collection
-     * @throws \Exception
-     */
     public function getCars(Base $collection, int $page = 1) : Collection {
         $cars = $this->getCarsFromSearch($collection, $page);
 
