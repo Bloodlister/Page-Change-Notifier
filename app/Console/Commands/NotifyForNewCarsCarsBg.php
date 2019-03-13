@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Car\Collection\CarsBg as CarsBGCollection;
+use App\Car\Collection\CarsBG as CarsBGCollection;
 use App\Car\Retriever\CarsBg as CarsBGRetriever;
 
 class NotifyForNewCarsCarsBg extends Command
