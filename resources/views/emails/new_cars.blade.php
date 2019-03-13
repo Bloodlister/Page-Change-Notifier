@@ -9,6 +9,7 @@
 <body>
 <link href="{{ $cssPath . "/css/mailing.css" }}" rel="stylesheet" data-inline>
 <table class="car-collection">
+  <h2>{{ $title }}</h2>
     @foreach($newCars as $newCar)
         <tr class="car">
             <td class="image">

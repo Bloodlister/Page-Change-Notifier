@@ -108,7 +108,7 @@ class NotifyForNewCars extends Command
             } else {
                 $cssPath = env('APP_URL');
             }
-            $newCarsMail = new NewCars($this->newCars, $cssPath);
+            $newCarsMail = new NewCars("MobileBG", $this->newCars, $cssPath);
             Mail::to($user->email)->sendNow($newCarsMail);
         }
     }

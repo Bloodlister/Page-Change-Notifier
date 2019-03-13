@@ -22,13 +22,17 @@ class NewCars extends Mailable
     /** @var string $cssPath */
     private $cssPath;
 
+    /** @var string $title */
+    private $title;
+
     /**
      * Create a new message instance.
      *
      * @param Collection $newCars
      */
-    public function __construct(Collection $newCars, $cssPath = '')
+    public function __construct($title, Collection $newCars, $cssPath = '')
     {
+        $this->title = $title;
         $this->newCars = $newCars;
         $this->cssPath = $cssPath;
     }
@@ -41,7 +45,8 @@ class NewCars extends Mailable
     public function build()
     {
         return $this->view('emails.new_cars')
-            ->with([
+          ->with([
+                'title'   => $this->title,
                 'newCars' => $this->newCars,
                 'cssPath' => $this->cssPath,
             ])

@@ -107,7 +107,7 @@ class NotifyForNewCarsCarsBg extends Command
                 $cssPath = env('APP_URL');
             }
             foreach ($this->newCars->chunk(50) as $newCarsChunk) {
-                $newCarsMail = new NewCars($newCarsChunk, $cssPath);
+                $newCarsMail = new NewCars("CarsBG", $newCarsChunk, $cssPath);
                 Mail::to($user->email)->sendNow($newCarsMail);
             }
         }
