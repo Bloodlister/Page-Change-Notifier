@@ -70,7 +70,7 @@ class NotifyForNewCars extends Command
             $collection = new MBGCollection();
 
             //Looping though all users
-            $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
+            $user->filters()->where("type", "=", "MobileBG")->each(function (Filter $filter) use ($user, $retriever, $collection) {
                 $collection->setSearchParams($filter->search_params); // Setting search params to the collection
                 $collection->setSlink(false); // Resetting the slink
 

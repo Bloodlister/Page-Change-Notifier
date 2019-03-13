@@ -10,12 +10,7 @@ class Request {
      * @return string
      */
     public static function urlencode(array $variables) {
-        $result = '';
-        foreach ($variables as $key => $value) {
-            $result .= $key . '=' . $value . '&';
-        }
-        $result = trim($result, '&');
-        return $result;
+        return http_build_query($variables);
     }
 
     public static function sendGetRequest(string $url, $options = []) {

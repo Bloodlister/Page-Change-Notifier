@@ -70,7 +70,7 @@ class NotifyForNewCarsCarsBg extends Command
             $collection = new CarsBGCollection();
 
             //Looping though all users
-            $user->filters()->each(function (Filter $filter) use ($user, $retriever, $collection) {
+            $user->filters()->where("type", "=", "CarsBg")->each(function (Filter $filter) use ($user, $retriever, $collection) {
                 $collection->setSearchParams($filter->search_params); // Setting search params to the collection
                 $seenCarLinks = $filter->getSeenCarLinks();
 
