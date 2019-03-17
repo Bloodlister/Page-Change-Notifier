@@ -33,17 +33,19 @@
 <script>
 import MobileBG from './searches/MobileBGCars.vue';
 import CarsBG from './searches/CarsBG.vue';
+import MobileBGBikes from './searches/MobileBGBikes.vue';
 
 export default {
     name: 'Wrapper',
     components: {
         MobileBG,
         CarsBG,
+        MobileBGBikes,
     },
     data: function() {
         return {
             index: 0,
-            searches: [MobileBG, CarsBG],
+            searches: [MobileBG, CarsBG, MobileBGBikes],
             message: '',
             error: ''
         }
