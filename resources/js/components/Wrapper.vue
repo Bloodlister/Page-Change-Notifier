@@ -34,6 +34,7 @@
 import MobileBG from './searches/MobileBGCars.vue';
 import CarsBG from './searches/CarsBG.vue';
 import MobileBGBikes from './searches/MobileBGBikes.vue';
+import MobileBGBuses from './searches/MobileBGBuses.vue';
 
 export default {
     name: 'Wrapper',
@@ -41,11 +42,12 @@ export default {
         MobileBG,
         CarsBG,
         MobileBGBikes,
+        MobileBGBuses,
     },
     data: function() {
         return {
             index: 0,
-            searches: [MobileBG, CarsBG, MobileBGBikes],
+            searches: [MobileBG, CarsBG, MobileBGBikes, MobileBGBuses],
             message: '',
             error: ''
         }
