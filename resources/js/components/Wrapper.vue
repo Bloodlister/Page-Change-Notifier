@@ -35,6 +35,7 @@ import MobileBG from './searches/MobileBGCars.vue';
 import MobileBGBikes from './searches/MobileBGBikes.vue';
 import MobileBGBuses from './searches/MobileBGBuses.vue';
 import CarsBG from './searches/CarsBG.vue';
+import CarsBGBikes from './searches/CarsBGBikes.vue';
 import CarsBGBuses from './searches/CarsBGBuses.vue';
 
 export default {
@@ -44,12 +45,13 @@ export default {
         MobileBGBikes,
         MobileBGBuses,
         CarsBG,
+        CarsBGBikes,
         CarsBGBuses,
     },
     data: function() {
         return {
             index: 0,
-            searches: [MobileBG, MobileBGBikes, MobileBGBuses, CarsBG, CarsBGBuses],
+            searches: [MobileBG, MobileBGBikes, MobileBGBuses, CarsBG, CarsBGBikes, CarsBGBuses],
             message: '',
             error: ''
         }

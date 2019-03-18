@@ -10,6 +10,7 @@ class Factory extends FactoryBase {
         MobileBGBikes::IDENTIFIER => MobileBGBikes::class,
         MobileBGBuses::IDENTIFIER => MobileBGBuses::class,
         CarsBG::IDENTIFIER        => CarsBG::class,
+        CarsBGBikes::IDENTIFIER   => CarsBGBikes::class,
         CarsBGBuses::IDENTIFIER   => CarsBGBuses::class,
     ];
 
