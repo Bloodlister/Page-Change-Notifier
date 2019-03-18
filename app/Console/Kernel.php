@@ -27,7 +27,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('notifier:MobileBG ' . env('APP_URL'))->cron('*/6 * * * *');
         $schedule->command('notifier:MobileBGBikes ' . env('APP_URL'))->cron('*/6 * * * *');
         $schedule->command('notifier:MobileBGBuses ' . env('APP_URL'))->cron('*/6 * * * *');
-        $schedule->command('notifier:CarsBG')->cron('*/30 * * * *');
+        $schedule->command('notifier:CarsBG')->cron('1,16,31,46 * * * *');
+        $schedule->command('notifier:CarsBGBikes')->cron('1,16,31,46 * * * *');
         $schedule->command('notifier:clearCars')->cron('*/30 * * * *');
     }
 

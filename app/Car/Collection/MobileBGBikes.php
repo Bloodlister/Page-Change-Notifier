@@ -42,9 +42,9 @@ class MobileBGBikes extends Base {
         $this->slink = $slink;
     }
 
-    public function addCars(Collection $bikes) {
+    public function addCars(Collection $buses) {
         /** @var Bike $bike */
-        foreach ($bikes as $bike) {
+        foreach ($buses as $bike) {
             if ($bike->isTopOffer && $this->topOfferBikes->count() != self::INITIAL_CAR_LIMIT) {
                 $this->topOfferBikes->push($bike);
                 $this->cars->push($bike);
