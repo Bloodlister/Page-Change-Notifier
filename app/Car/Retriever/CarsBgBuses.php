@@ -24,7 +24,6 @@ class CarsBgBuses extends Retriever {
         $query = 'https://www.cars.bg/?go=busove&search=1&filterOrderBy=1&section=busove&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
-        var_dump($query); exit();
         $response = Request::sendGetRequest($query);
         $decoder = \App\Car\Decoder\Factory::get(\App\Car\Decoder\CarsBG::IDENTIFIER);
 
