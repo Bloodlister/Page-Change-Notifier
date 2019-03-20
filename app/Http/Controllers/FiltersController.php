@@ -11,9 +11,9 @@ class FiltersController extends Controller
         return view('filters.vue');
     }
 
-    public function all(Request $request) {
+    public function get(Request $request, $type) {
         return response()->json(
-            Filter::where('user_id', '=', $request->user()->id)
+            Filter::where([['user_id', '=', $request->user()->id], ['type', '=', $type]])
                 ->get()
                 ->map(function ($filter) {
                     /** @var Filter $filter */

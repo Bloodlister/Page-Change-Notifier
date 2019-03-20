@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import AddListenings from './pages/AddListenings.vue';
-import AllListenings from './pages/AllListenings.vue';
+import AllFilters from './pages/AllFilters.vue';
 
 Vue.use(VueRouter);
 
@@ -15,7 +15,7 @@ const router = new VueRouter({
         {
             path: '/all',
             name: 'all',
-            component: AllListenings
+            component: AllFilters
         }
     ],
 });

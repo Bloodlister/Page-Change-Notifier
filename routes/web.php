@@ -13,7 +13,7 @@
 
 Route::middleware('auth')->group(function () {
     Route::get('/filters', 'FiltersController@index');
-    Route::get('/filters/all', 'FiltersController@all');
+    Route::get('/filters/{type}', 'FiltersController@get');
     Route::post('/filters/create', 'FiltersController@create');
     Route::post('/filters/delete', 'FiltersController@delete');
 
