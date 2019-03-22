@@ -52,6 +52,10 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/locks'),
         ],
+        'cars_configs' => [
+            'driver' => 'local',
+            'root' => storage_path('app/carsBGConfigs'),
+        ],
 
         'public' => [
             'driver' => 'local',
