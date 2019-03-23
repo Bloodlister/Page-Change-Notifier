@@ -47,13 +47,13 @@ class CreateCarsBrandsAndModels extends Command
     {
         $this->identifier = $this->argument('identifier');
         $fileSys = new Filesystem();
-        $fileSys->cleanDirectory(self::BASE_CONFIG_LOCATION);
 
         $brandIds = $this->getBrandIds($fileSys);
-
         $models = $this->getModels($brandIds);
 
         $this->saveModels($fileSys, $models);
+
+        return true;
     }
 
     public function getBrandIds(Filesystem $fileSys) {
@@ -68,7 +68,6 @@ class CreateCarsBrandsAndModels extends Command
         $models = [];
 
         foreach($brandIds as $brandId) {
-            static $count = 0;
             $models[$brandId] = CarsBG::getModels($brandId)->toArray();
         }
 

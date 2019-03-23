@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h2 class="text-center">CarsBG Cars</h2>
+        <h2 class="text-center">CarsBG Bikes</h2>
         <div v-if="filtersStatus === 2 && filters.length > 0" id="filters">
             <mobileBGFilter  v-for="(filter, index) in filters"
                              :key="index"
@@ -20,11 +20,10 @@
 </template>
 
 <script>
-    import Filter from './CarsBG/CarFilter.vue';
-    import Brands from '../searches/data/CarsBG';
+    import Filter from './CarsBG/CarFilterBikes.vue';
 
     export default {
-        name: "CarsBGCarsView",
+        name: "CarsBGBikesView",
         components: {
             mobileBGFilter: Filter
         },
@@ -33,8 +32,6 @@
                 filters: [],
                 filtersStatus: 1,
                 brandModels: {
-                    brands: Brands.inputs.brands,
-                    models: {},
                     getModels(brand) {
                         if (!this.models[brand]) {
                             this.$http.get('/carsbg/models?brandId=' + this.storage['brandId']).then(resp => {
@@ -58,7 +55,7 @@
         },
         methods: {
             setFilters() {
-                this.$http.get('/filters/CarsBG')
+                this.$http.get('/filters/CarsBGBikes')
                     .then(({data}) => {
                         this.filtersStatus = 2;
                         this.filters = data;

@@ -3,9 +3,9 @@
         <template>
             <div>
                 <div class="searchNavigation">
-                    <button v-on:click="index != 0 ? index-- : index++">◄</button>
+                    <button v-on:click="index != 0 ? index-- : index = searches.length-1">◄</button>
                     <h1>{{currentSearch.title}}</h1>
-                    <button v-on:click="index++">►</button>
+                    <button v-on:click="index > searches.length ? index = 0 : index++">►</button>
                 </div>
                 <keep-alive>
                     <component :is="currentSearch" v-on:passData="createFilter"></component>

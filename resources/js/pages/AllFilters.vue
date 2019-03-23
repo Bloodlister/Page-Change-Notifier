@@ -7,6 +7,11 @@
         <hr>
         <MobileBGBusesView></MobileBGBusesView>
         <hr>
+        <CarsBGCarsView></CarsBGCarsView>
+        <hr>
+        <CarsBGBikesView></CarsBGBikesView>
+        <hr>
+        <CarsBGBusesView></CarsBGBusesView>
     </div>
 </template>
 
@@ -14,6 +19,9 @@
     import MobileBGCarsView from '../components/filterViews/MobileBGCars.vue';
     import MobileBGBikesView from '../components/filterViews/MobileBGBikes.vue';
     import MobileBGBusesView from '../components/filterViews/MobileBGBuses.vue';
+    import CarsBGCarsView from '../components/filterViews/CarsBGCars.vue';
+    import CarsBGBikesView from '../components/filterViews/CarsBGBikes.vue';
+    import CarsBGBusesView from '../components/filterViews/CarsBGBuses.vue';
 
     export default {
         name: 'AllFilters',
@@ -21,6 +29,9 @@
             MobileBGCarsView: MobileBGCarsView,
             MobileBGBikesView: MobileBGBikesView,
             MobileBGBusesView: MobileBGBusesView,
+            CarsBGCarsView: CarsBGCarsView,
+            CarsBGBusesView: CarsBGBusesView,
+            CarsBGBikesView: CarsBGBikesView,
         }
     }
 </script>

@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 22);
+/******/ 	return __webpack_require__(__webpack_require__.s = 24);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -174,13 +174,323 @@ module.exports = function normalizeComponent (
 
 /***/ }),
 /* 1 */
+/***/ (function(module, exports) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+// css base code, injected by the css-loader
+module.exports = function(useSourceMap) {
+	var list = [];
+
+	// return the list of modules as css string
+	list.toString = function toString() {
+		return this.map(function (item) {
+			var content = cssWithMappingToString(item, useSourceMap);
+			if(item[2]) {
+				return "@media " + item[2] + "{" + content + "}";
+			} else {
+				return content;
+			}
+		}).join("");
+	};
+
+	// import a list of modules into the list
+	list.i = function(modules, mediaQuery) {
+		if(typeof modules === "string")
+			modules = [[null, modules, ""]];
+		var alreadyImportedModules = {};
+		for(var i = 0; i < this.length; i++) {
+			var id = this[i][0];
+			if(typeof id === "number")
+				alreadyImportedModules[id] = true;
+		}
+		for(i = 0; i < modules.length; i++) {
+			var item = modules[i];
+			// skip already imported module
+			// this implementation is not 100% perfect for weird media query combinations
+			//  when a module is imported multiple times with different media queries.
+			//  I hope this will never occur (Hey this way we have smaller bundles)
+			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
+				if(mediaQuery && !item[2]) {
+					item[2] = mediaQuery;
+				} else if(mediaQuery) {
+					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
+				}
+				list.push(item);
+			}
+		}
+	};
+	return list;
+};
+
+function cssWithMappingToString(item, useSourceMap) {
+	var content = item[1] || '';
+	var cssMapping = item[3];
+	if (!cssMapping) {
+		return content;
+	}
+
+	if (useSourceMap && typeof btoa === 'function') {
+		var sourceMapping = toComment(cssMapping);
+		var sourceURLs = cssMapping.sources.map(function (source) {
+			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
+		});
+
+		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
+	}
+
+	return [content].join('\n');
+}
+
+// Adapted from convert-source-map (MIT)
+function toComment(sourceMap) {
+	// eslint-disable-next-line no-undef
+	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
+	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
+
+	return '/*# ' + data + ' */';
+}
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+  Modified by Evan You @yyx990803
+*/
+
+var hasDocument = typeof document !== 'undefined'
+
+if (typeof DEBUG !== 'undefined' && DEBUG) {
+  if (!hasDocument) {
+    throw new Error(
+    'vue-style-loader cannot be used in a non-browser environment. ' +
+    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
+  ) }
+}
+
+var listToStyles = __webpack_require__(57)
+
+/*
+type StyleObject = {
+  id: number;
+  parts: Array<StyleObjectPart>
+}
+
+type StyleObjectPart = {
+  css: string;
+  media: string;
+  sourceMap: ?string
+}
+*/
+
+var stylesInDom = {/*
+  [id: number]: {
+    id: number,
+    refs: number,
+    parts: Array<(obj?: StyleObjectPart) => void>
+  }
+*/}
+
+var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
+var singletonElement = null
+var singletonCounter = 0
+var isProduction = false
+var noop = function () {}
+var options = null
+var ssrIdKey = 'data-vue-ssr-id'
+
+// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+// tags it will allow on a page
+var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
+
+module.exports = function (parentId, list, _isProduction, _options) {
+  isProduction = _isProduction
+
+  options = _options || {}
+
+  var styles = listToStyles(parentId, list)
+  addStylesToDom(styles)
+
+  return function update (newList) {
+    var mayRemove = []
+    for (var i = 0; i < styles.length; i++) {
+      var item = styles[i]
+      var domStyle = stylesInDom[item.id]
+      domStyle.refs--
+      mayRemove.push(domStyle)
+    }
+    if (newList) {
+      styles = listToStyles(parentId, newList)
+      addStylesToDom(styles)
+    } else {
+      styles = []
+    }
+    for (var i = 0; i < mayRemove.length; i++) {
+      var domStyle = mayRemove[i]
+      if (domStyle.refs === 0) {
+        for (var j = 0; j < domStyle.parts.length; j++) {
+          domStyle.parts[j]()
+        }
+        delete stylesInDom[domStyle.id]
+      }
+    }
+  }
+}
+
+function addStylesToDom (styles /* Array<StyleObject> */) {
+  for (var i = 0; i < styles.length; i++) {
+    var item = styles[i]
+    var domStyle = stylesInDom[item.id]
+    if (domStyle) {
+      domStyle.refs++
+      for (var j = 0; j < domStyle.parts.length; j++) {
+        domStyle.parts[j](item.parts[j])
+      }
+      for (; j < item.parts.length; j++) {
+        domStyle.parts.push(addStyle(item.parts[j]))
+      }
+      if (domStyle.parts.length > item.parts.length) {
+        domStyle.parts.length = item.parts.length
+      }
+    } else {
+      var parts = []
+      for (var j = 0; j < item.parts.length; j++) {
+        parts.push(addStyle(item.parts[j]))
+      }
+      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
+    }
+  }
+}
+
+function createStyleElement () {
+  var styleElement = document.createElement('style')
+  styleElement.type = 'text/css'
+  head.appendChild(styleElement)
+  return styleElement
+}
+
+function addStyle (obj /* StyleObjectPart */) {
+  var update, remove
+  var styleElement = document.querySelector('style[' + ssrIdKey + '~="' + obj.id + '"]')
+
+  if (styleElement) {
+    if (isProduction) {
+      // has SSR styles and in production mode.
+      // simply do nothing.
+      return noop
+    } else {
+      // has SSR styles but in dev mode.
+      // for some reason Chrome can't handle source map in server-rendered
+      // style tags - source maps in <style> only works if the style tag is
+      // created and inserted dynamically. So we remove the server rendered
+      // styles and inject new ones.
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  if (isOldIE) {
+    // use singleton mode for IE9.
+    var styleIndex = singletonCounter++
+    styleElement = singletonElement || (singletonElement = createStyleElement())
+    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
+    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
+  } else {
+    // use multi-style-tag mode in all other cases
+    styleElement = createStyleElement()
+    update = applyToTag.bind(null, styleElement)
+    remove = function () {
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  update(obj)
+
+  return function updateStyle (newObj /* StyleObjectPart */) {
+    if (newObj) {
+      if (newObj.css === obj.css &&
+          newObj.media === obj.media &&
+          newObj.sourceMap === obj.sourceMap) {
+        return
+      }
+      update(obj = newObj)
+    } else {
+      remove()
+    }
+  }
+}
+
+var replaceText = (function () {
+  var textStore = []
+
+  return function (index, replacement) {
+    textStore[index] = replacement
+    return textStore.filter(Boolean).join('\n')
+  }
+})()
+
+function applyToSingletonTag (styleElement, index, remove, obj) {
+  var css = remove ? '' : obj.css
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = replaceText(index, css)
+  } else {
+    var cssNode = document.createTextNode(css)
+    var childNodes = styleElement.childNodes
+    if (childNodes[index]) styleElement.removeChild(childNodes[index])
+    if (childNodes.length) {
+      styleElement.insertBefore(cssNode, childNodes[index])
+    } else {
+      styleElement.appendChild(cssNode)
+    }
+  }
+}
+
+function applyToTag (styleElement, obj) {
+  var css = obj.css
+  var media = obj.media
+  var sourceMap = obj.sourceMap
+
+  if (media) {
+    styleElement.setAttribute('media', media)
+  }
+  if (options.ssrId) {
+    styleElement.setAttribute(ssrIdKey, obj.id)
+  }
+
+  if (sourceMap) {
+    // https://developer.chrome.com/devtools/docs/javascript-debugging
+    // this makes source maps inside style tags work properly in Chrome
+    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
+    // http://stackoverflow.com/a/26603875
+    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
+  }
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild)
+    }
+    styleElement.appendChild(document.createTextNode(css))
+  }
+}
+
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bind = __webpack_require__(9);
-var isBuffer = __webpack_require__(29);
+var bind = __webpack_require__(11);
+var isBuffer = __webpack_require__(31);
 
 /*global toString:true*/
 
@@ -483,316 +793,6 @@ module.exports = {
 
 
 /***/ }),
-/* 2 */
-/***/ (function(module, exports) {
-
-/*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
-// css base code, injected by the css-loader
-module.exports = function(useSourceMap) {
-	var list = [];
-
-	// return the list of modules as css string
-	list.toString = function toString() {
-		return this.map(function (item) {
-			var content = cssWithMappingToString(item, useSourceMap);
-			if(item[2]) {
-				return "@media " + item[2] + "{" + content + "}";
-			} else {
-				return content;
-			}
-		}).join("");
-	};
-
-	// import a list of modules into the list
-	list.i = function(modules, mediaQuery) {
-		if(typeof modules === "string")
-			modules = [[null, modules, ""]];
-		var alreadyImportedModules = {};
-		for(var i = 0; i < this.length; i++) {
-			var id = this[i][0];
-			if(typeof id === "number")
-				alreadyImportedModules[id] = true;
-		}
-		for(i = 0; i < modules.length; i++) {
-			var item = modules[i];
-			// skip already imported module
-			// this implementation is not 100% perfect for weird media query combinations
-			//  when a module is imported multiple times with different media queries.
-			//  I hope this will never occur (Hey this way we have smaller bundles)
-			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
-				if(mediaQuery && !item[2]) {
-					item[2] = mediaQuery;
-				} else if(mediaQuery) {
-					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
-				}
-				list.push(item);
-			}
-		}
-	};
-	return list;
-};
-
-function cssWithMappingToString(item, useSourceMap) {
-	var content = item[1] || '';
-	var cssMapping = item[3];
-	if (!cssMapping) {
-		return content;
-	}
-
-	if (useSourceMap && typeof btoa === 'function') {
-		var sourceMapping = toComment(cssMapping);
-		var sourceURLs = cssMapping.sources.map(function (source) {
-			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
-		});
-
-		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
-	}
-
-	return [content].join('\n');
-}
-
-// Adapted from convert-source-map (MIT)
-function toComment(sourceMap) {
-	// eslint-disable-next-line no-undef
-	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
-	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
-
-	return '/*# ' + data + ' */';
-}
-
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*
-  MIT License http://www.opensource.org/licenses/mit-license.php
-  Author Tobias Koppers @sokra
-  Modified by Evan You @yyx990803
-*/
-
-var hasDocument = typeof document !== 'undefined'
-
-if (typeof DEBUG !== 'undefined' && DEBUG) {
-  if (!hasDocument) {
-    throw new Error(
-    'vue-style-loader cannot be used in a non-browser environment. ' +
-    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
-  ) }
-}
-
-var listToStyles = __webpack_require__(55)
-
-/*
-type StyleObject = {
-  id: number;
-  parts: Array<StyleObjectPart>
-}
-
-type StyleObjectPart = {
-  css: string;
-  media: string;
-  sourceMap: ?string
-}
-*/
-
-var stylesInDom = {/*
-  [id: number]: {
-    id: number,
-    refs: number,
-    parts: Array<(obj?: StyleObjectPart) => void>
-  }
-*/}
-
-var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
-var singletonElement = null
-var singletonCounter = 0
-var isProduction = false
-var noop = function () {}
-var options = null
-var ssrIdKey = 'data-vue-ssr-id'
-
-// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
-// tags it will allow on a page
-var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
-
-module.exports = function (parentId, list, _isProduction, _options) {
-  isProduction = _isProduction
-
-  options = _options || {}
-
-  var styles = listToStyles(parentId, list)
-  addStylesToDom(styles)
-
-  return function update (newList) {
-    var mayRemove = []
-    for (var i = 0; i < styles.length; i++) {
-      var item = styles[i]
-      var domStyle = stylesInDom[item.id]
-      domStyle.refs--
-      mayRemove.push(domStyle)
-    }
-    if (newList) {
-      styles = listToStyles(parentId, newList)
-      addStylesToDom(styles)
-    } else {
-      styles = []
-    }
-    for (var i = 0; i < mayRemove.length; i++) {
-      var domStyle = mayRemove[i]
-      if (domStyle.refs === 0) {
-        for (var j = 0; j < domStyle.parts.length; j++) {
-          domStyle.parts[j]()
-        }
-        delete stylesInDom[domStyle.id]
-      }
-    }
-  }
-}
-
-function addStylesToDom (styles /* Array<StyleObject> */) {
-  for (var i = 0; i < styles.length; i++) {
-    var item = styles[i]
-    var domStyle = stylesInDom[item.id]
-    if (domStyle) {
-      domStyle.refs++
-      for (var j = 0; j < domStyle.parts.length; j++) {
-        domStyle.parts[j](item.parts[j])
-      }
-      for (; j < item.parts.length; j++) {
-        domStyle.parts.push(addStyle(item.parts[j]))
-      }
-      if (domStyle.parts.length > item.parts.length) {
-        domStyle.parts.length = item.parts.length
-      }
-    } else {
-      var parts = []
-      for (var j = 0; j < item.parts.length; j++) {
-        parts.push(addStyle(item.parts[j]))
-      }
-      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
-    }
-  }
-}
-
-function createStyleElement () {
-  var styleElement = document.createElement('style')
-  styleElement.type = 'text/css'
-  head.appendChild(styleElement)
-  return styleElement
-}
-
-function addStyle (obj /* StyleObjectPart */) {
-  var update, remove
-  var styleElement = document.querySelector('style[' + ssrIdKey + '~="' + obj.id + '"]')
-
-  if (styleElement) {
-    if (isProduction) {
-      // has SSR styles and in production mode.
-      // simply do nothing.
-      return noop
-    } else {
-      // has SSR styles but in dev mode.
-      // for some reason Chrome can't handle source map in server-rendered
-      // style tags - source maps in <style> only works if the style tag is
-      // created and inserted dynamically. So we remove the server rendered
-      // styles and inject new ones.
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  if (isOldIE) {
-    // use singleton mode for IE9.
-    var styleIndex = singletonCounter++
-    styleElement = singletonElement || (singletonElement = createStyleElement())
-    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
-    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
-  } else {
-    // use multi-style-tag mode in all other cases
-    styleElement = createStyleElement()
-    update = applyToTag.bind(null, styleElement)
-    remove = function () {
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  update(obj)
-
-  return function updateStyle (newObj /* StyleObjectPart */) {
-    if (newObj) {
-      if (newObj.css === obj.css &&
-          newObj.media === obj.media &&
-          newObj.sourceMap === obj.sourceMap) {
-        return
-      }
-      update(obj = newObj)
-    } else {
-      remove()
-    }
-  }
-}
-
-var replaceText = (function () {
-  var textStore = []
-
-  return function (index, replacement) {
-    textStore[index] = replacement
-    return textStore.filter(Boolean).join('\n')
-  }
-})()
-
-function applyToSingletonTag (styleElement, index, remove, obj) {
-  var css = remove ? '' : obj.css
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = replaceText(index, css)
-  } else {
-    var cssNode = document.createTextNode(css)
-    var childNodes = styleElement.childNodes
-    if (childNodes[index]) styleElement.removeChild(childNodes[index])
-    if (childNodes.length) {
-      styleElement.insertBefore(cssNode, childNodes[index])
-    } else {
-      styleElement.appendChild(cssNode)
-    }
-  }
-}
-
-function applyToTag (styleElement, obj) {
-  var css = obj.css
-  var media = obj.media
-  var sourceMap = obj.sourceMap
-
-  if (media) {
-    styleElement.setAttribute('media', media)
-  }
-  if (options.ssrId) {
-    styleElement.setAttribute(ssrIdKey, obj.id)
-  }
-
-  if (sourceMap) {
-    // https://developer.chrome.com/devtools/docs/javascript-debugging
-    // this makes source maps inside style tags work properly in Chrome
-    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
-    // http://stackoverflow.com/a/26603875
-    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
-  }
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = css
-  } else {
-    while (styleElement.firstChild) {
-      styleElement.removeChild(styleElement.firstChild)
-    }
-    styleElement.appendChild(document.createTextNode(css))
-  }
-}
-
-
-/***/ }),
 /* 4 */
 /***/ (function(module, exports) {
 
@@ -826,8 +826,8 @@ module.exports = g;
 "use strict";
 /* WEBPACK VAR INJECTION */(function(process) {
 
-var utils = __webpack_require__(1);
-var normalizeHeaderName = __webpack_require__(31);
+var utils = __webpack_require__(3);
+var normalizeHeaderName = __webpack_require__(33);
 
 var DEFAULT_CONTENT_TYPE = {
   'Content-Type': 'application/x-www-form-urlencoded'
@@ -843,10 +843,10 @@ function getDefaultAdapter() {
   var adapter;
   if (typeof XMLHttpRequest !== 'undefined') {
     // For browsers use XHR adapter
-    adapter = __webpack_require__(11);
+    adapter = __webpack_require__(13);
   } else if (typeof process !== 'undefined') {
     // For node use HTTP adapter
-    adapter = __webpack_require__(11);
+    adapter = __webpack_require__(13);
   }
   return adapter;
 }
@@ -921,10 +921,165 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 
 module.exports = defaults;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)))
 
 /***/ }),
 /* 6 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony default export */ __webpack_exports__["a"] = ({
+    "defaultStorage": {
+        "brandId": null
+    },
+    "inputs": {
+        "brands": {
+            "0": "- Всички -",
+            "1": "Acura",
+            "2": "Aixam",
+            "3": "Aro",
+            "4": "Alfa Romeo",
+            "6": "Asia Motors",
+            "7": "Aston Martin",
+            "8": "Audi",
+            "9": "Bentley",
+            "10": "BMW",
+            "11": "Brilliance",
+            "13": "Buick",
+            "14": "Cadillac",
+            "15": "Chevrolet",
+            "16": "Chrysler",
+            "17": "Citroen",
+            "19": "Dacia",
+            "20": "Daewoo",
+            "21": "Daihatsu",
+            "22": "Datsun",
+            "23": "Dodge",
+            "24": "Ferrari",
+            "25": "Fiat",
+            "26": "Ford",
+            "27": "GAZ",
+            "29": "GMC",
+            "30": "Great wall",
+            "31": "Honda",
+            "32": "Hummer",
+            "33": "Hyundai",
+            "34": "Infiniti",
+            "35": "Isuzu",
+            "36": "Jaguar",
+            "37": "Jeep",
+            "38": "Kia",
+            "40": "Lada",
+            "41": "Lamborghini",
+            "42": "Lancia",
+            "43": "Land Rover",
+            "45": "Lexus",
+            "47": "Lincoln",
+            "49": "Mahindra",
+            "50": "Maserati",
+            "52": "Maybach",
+            "53": "Mazda",
+            "54": "Mercedes-Benz",
+            "55": "MG",
+            "56": "Mini",
+            "57": "Mitsubishi",
+            "59": "Moskvich",
+            "60": "Nissan",
+            "61": "Oldsmobile",
+            "63": "Opel",
+            "64": "Peugeot",
+            "65": "Piaggio",
+            "66": "Plymouth",
+            "67": "Pontiac",
+            "68": "Porsche",
+            "69": "Renault",
+            "70": "Rolls Royce",
+            "71": "Rover",
+            "72": "Seat",
+            "73": "Skoda",
+            "74": "Smart",
+            "75": "Ssangyong",
+            "76": "Subaru",
+            "77": "Suzuki",
+            "78": "Talbot",
+            "79": "Tata",
+            "80": "Toyota",
+            "81": "Trabant",
+            "84": "Volga",
+            "85": "Volvo",
+            "86": "VW",
+            "87": "Wartburg",
+            "89": "UAZ",
+            "90": "Zastava",
+            "91": "Zaz",
+            "92": "Saab",
+            "95": "Scion",
+            "97": "Iveco",
+            "99": "Shuanghuan",
+            "102": "Варшава",
+            "105": "Microcar",
+            "106": "Range Rover",
+            "107": "ВАЗ",
+            "123": "DR",
+            "126": "McLaren",
+            "127": "Gac Gonow",
+            "128": "Austin",
+            "129": "Tesla",
+            "134": "Yogomo",
+            "137": "Haval"
+        }
+    }
+});
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(174)
+/* template */
+var __vue_template__ = __webpack_require__(175)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/MobileBG/Filter.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-b4900528", Component.options)
+  } else {
+    hotAPI.reload("data-v-b4900528", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3505,7 +3660,7 @@ Popper.Defaults = Defaults;
 /* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(4)))
 
 /***/ }),
-/* 7 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -13876,13 +14031,13 @@ return jQuery;
 
 
 /***/ }),
-/* 8 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(28);
+module.exports = __webpack_require__(30);
 
 /***/ }),
-/* 9 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13900,7 +14055,7 @@ module.exports = function bind(fn, thisArg) {
 
 
 /***/ }),
-/* 10 */
+/* 12 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -14090,19 +14245,19 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 11 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
-var settle = __webpack_require__(32);
-var buildURL = __webpack_require__(34);
-var parseHeaders = __webpack_require__(35);
-var isURLSameOrigin = __webpack_require__(36);
-var createError = __webpack_require__(12);
-var btoa = (typeof window !== 'undefined' && window.btoa && window.btoa.bind(window)) || __webpack_require__(37);
+var utils = __webpack_require__(3);
+var settle = __webpack_require__(34);
+var buildURL = __webpack_require__(36);
+var parseHeaders = __webpack_require__(37);
+var isURLSameOrigin = __webpack_require__(38);
+var createError = __webpack_require__(14);
+var btoa = (typeof window !== 'undefined' && window.btoa && window.btoa.bind(window)) || __webpack_require__(39);
 
 module.exports = function xhrAdapter(config) {
   return new Promise(function dispatchXhrRequest(resolve, reject) {
@@ -14199,7 +14354,7 @@ module.exports = function xhrAdapter(config) {
     // This is only done if running in a standard browser environment.
     // Specifically not if we're in a web worker, or react-native.
     if (utils.isStandardBrowserEnv()) {
-      var cookies = __webpack_require__(38);
+      var cookies = __webpack_require__(40);
 
       // Add xsrf header
       var xsrfValue = (config.withCredentials || isURLSameOrigin(config.url)) && config.xsrfCookieName ?
@@ -14277,13 +14432,13 @@ module.exports = function xhrAdapter(config) {
 
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var enhanceError = __webpack_require__(33);
+var enhanceError = __webpack_require__(35);
 
 /**
  * Create an Error with the specified message, config, error code, request and response.
@@ -14302,7 +14457,7 @@ module.exports = function createError(message, config, code, request, response) 
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14314,7 +14469,7 @@ module.exports = function isCancel(value) {
 
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14340,7 +14495,7 @@ module.exports = Cancel;
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25434,18 +25589,18 @@ Vue.compile = compileToFunctions;
 
 module.exports = Vue;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(47).setImmediate))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(49).setImmediate))
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(59)
+var __vue_script__ = __webpack_require__(61)
 /* template */
-var __vue_template__ = __webpack_require__(60)
+var __vue_template__ = __webpack_require__(62)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -25484,19 +25639,19 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(63)
+  __webpack_require__(65)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(65)
+var __vue_script__ = __webpack_require__(67)
 /* template */
-var __vue_template__ = __webpack_require__(66)
+var __vue_template__ = __webpack_require__(68)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -25535,15 +25690,15 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(80)
+var __vue_script__ = __webpack_require__(82)
 /* template */
-var __vue_template__ = __webpack_require__(81)
+var __vue_template__ = __webpack_require__(83)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -25582,19 +25737,19 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(84)
+  __webpack_require__(86)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(86)
+var __vue_script__ = __webpack_require__(88)
 /* template */
-var __vue_template__ = __webpack_require__(87)
+var __vue_template__ = __webpack_require__(89)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -25633,15 +25788,15 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(101)
+var __vue_script__ = __webpack_require__(103)
 /* template */
-var __vue_template__ = __webpack_require__(102)
+var __vue_template__ = __webpack_require__(104)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -25680,19 +25835,19 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(105)
+  __webpack_require__(107)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(107)
+var __vue_script__ = __webpack_require__(109)
 /* template */
-var __vue_template__ = __webpack_require__(108)
+var __vue_template__ = __webpack_require__(110)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -25731,32 +25886,32 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(23);
-module.exports = __webpack_require__(181);
+__webpack_require__(25);
+module.exports = __webpack_require__(202);
 
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__router__ = __webpack_require__(46);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_axios__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__router__ = __webpack_require__(48);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_axios__ = __webpack_require__(10);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_axios___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_axios__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_vue_axios__ = __webpack_require__(175);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_vue_axios__ = __webpack_require__(196);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_vue_axios___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2_vue_axios__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__components_App_vue__ = __webpack_require__(176);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__components_App_vue__ = __webpack_require__(197);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__components_App_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__components_App_vue__);
-__webpack_require__(24);
+__webpack_require__(26);
 
 
 
 
-window.Vue = __webpack_require__(15);
+window.Vue = __webpack_require__(17);
 
 Vue.use(__WEBPACK_IMPORTED_MODULE_2_vue_axios___default.a, __WEBPACK_IMPORTED_MODULE_1_axios___default.a);
 
@@ -25769,11 +25924,11 @@ new Vue({
 }).$mount('#app');
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-window._ = __webpack_require__(25);
+window._ = __webpack_require__(27);
 
 /**
  * We'll load jQuery and the Bootstrap jQuery plugin which provides support
@@ -25782,10 +25937,10 @@ window._ = __webpack_require__(25);
  */
 
 try {
-  window.Popper = __webpack_require__(6).default;
-  window.$ = window.jQuery = __webpack_require__(7);
+  window.Popper = __webpack_require__(8).default;
+  window.$ = window.jQuery = __webpack_require__(9);
 
-  __webpack_require__(27);
+  __webpack_require__(29);
 } catch (e) {}
 
 /**
@@ -25794,7 +25949,7 @@ try {
  * CSRF token as a header based on the value of the "XSRF" token cookie.
  */
 
-window.axios = __webpack_require__(8);
+window.axios = __webpack_require__(10);
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
@@ -25830,7 +25985,7 @@ if (token) {
 // });
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, module) {var __WEBPACK_AMD_DEFINE_RESULT__;/**
@@ -42942,10 +43097,10 @@ if (token) {
   }
 }.call(this));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(26)(module)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(28)(module)))
 
 /***/ }),
-/* 26 */
+/* 28 */
 /***/ (function(module, exports) {
 
 module.exports = function(module) {
@@ -42973,7 +43128,7 @@ module.exports = function(module) {
 
 
 /***/ }),
-/* 27 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -42982,7 +43137,7 @@ module.exports = function(module) {
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-   true ? factory(exports, __webpack_require__(7), __webpack_require__(6)) :
+   true ? factory(exports, __webpack_require__(9), __webpack_require__(8)) :
   typeof define === 'function' && define.amd ? define(['exports', 'jquery', 'popper.js'], factory) :
   (factory((global.bootstrap = {}),global.jQuery,global.Popper));
 }(this, (function (exports,$,Popper) { 'use strict';
@@ -46923,15 +47078,15 @@ module.exports = function(module) {
 
 
 /***/ }),
-/* 28 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
-var bind = __webpack_require__(9);
-var Axios = __webpack_require__(30);
+var utils = __webpack_require__(3);
+var bind = __webpack_require__(11);
+var Axios = __webpack_require__(32);
 var defaults = __webpack_require__(5);
 
 /**
@@ -46965,15 +47120,15 @@ axios.create = function create(instanceConfig) {
 };
 
 // Expose Cancel & CancelToken
-axios.Cancel = __webpack_require__(14);
-axios.CancelToken = __webpack_require__(44);
-axios.isCancel = __webpack_require__(13);
+axios.Cancel = __webpack_require__(16);
+axios.CancelToken = __webpack_require__(46);
+axios.isCancel = __webpack_require__(15);
 
 // Expose all/spread
 axios.all = function all(promises) {
   return Promise.all(promises);
 };
-axios.spread = __webpack_require__(45);
+axios.spread = __webpack_require__(47);
 
 module.exports = axios;
 
@@ -46982,7 +47137,7 @@ module.exports.default = axios;
 
 
 /***/ }),
-/* 29 */
+/* 31 */
 /***/ (function(module, exports) {
 
 /*!
@@ -47009,16 +47164,16 @@ function isSlowBuffer (obj) {
 
 
 /***/ }),
-/* 30 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var defaults = __webpack_require__(5);
-var utils = __webpack_require__(1);
-var InterceptorManager = __webpack_require__(39);
-var dispatchRequest = __webpack_require__(40);
+var utils = __webpack_require__(3);
+var InterceptorManager = __webpack_require__(41);
+var dispatchRequest = __webpack_require__(42);
 
 /**
  * Create a new instance of Axios
@@ -47095,13 +47250,13 @@ module.exports = Axios;
 
 
 /***/ }),
-/* 31 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 module.exports = function normalizeHeaderName(headers, normalizedName) {
   utils.forEach(headers, function processHeader(value, name) {
@@ -47114,13 +47269,13 @@ module.exports = function normalizeHeaderName(headers, normalizedName) {
 
 
 /***/ }),
-/* 32 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createError = __webpack_require__(12);
+var createError = __webpack_require__(14);
 
 /**
  * Resolve or reject a Promise based on response status.
@@ -47147,7 +47302,7 @@ module.exports = function settle(resolve, reject, response) {
 
 
 /***/ }),
-/* 33 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47175,13 +47330,13 @@ module.exports = function enhanceError(error, config, code, request, response) {
 
 
 /***/ }),
-/* 34 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 function encode(val) {
   return encodeURIComponent(val).
@@ -47248,13 +47403,13 @@ module.exports = function buildURL(url, params, paramsSerializer) {
 
 
 /***/ }),
-/* 35 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 // Headers whose duplicates are ignored by node
 // c.f. https://nodejs.org/api/http.html#http_message_headers
@@ -47308,13 +47463,13 @@ module.exports = function parseHeaders(headers) {
 
 
 /***/ }),
-/* 36 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 module.exports = (
   utils.isStandardBrowserEnv() ?
@@ -47383,7 +47538,7 @@ module.exports = (
 
 
 /***/ }),
-/* 37 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47426,13 +47581,13 @@ module.exports = btoa;
 
 
 /***/ }),
-/* 38 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 module.exports = (
   utils.isStandardBrowserEnv() ?
@@ -47486,13 +47641,13 @@ module.exports = (
 
 
 /***/ }),
-/* 39 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 function InterceptorManager() {
   this.handlers = [];
@@ -47545,18 +47700,18 @@ module.exports = InterceptorManager;
 
 
 /***/ }),
-/* 40 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
-var transformData = __webpack_require__(41);
-var isCancel = __webpack_require__(13);
+var utils = __webpack_require__(3);
+var transformData = __webpack_require__(43);
+var isCancel = __webpack_require__(15);
 var defaults = __webpack_require__(5);
-var isAbsoluteURL = __webpack_require__(42);
-var combineURLs = __webpack_require__(43);
+var isAbsoluteURL = __webpack_require__(44);
+var combineURLs = __webpack_require__(45);
 
 /**
  * Throws a `Cancel` if cancellation has been requested.
@@ -47638,13 +47793,13 @@ module.exports = function dispatchRequest(config) {
 
 
 /***/ }),
-/* 41 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var utils = __webpack_require__(1);
+var utils = __webpack_require__(3);
 
 /**
  * Transform the data for a request or a response
@@ -47665,7 +47820,7 @@ module.exports = function transformData(data, headers, fns) {
 
 
 /***/ }),
-/* 42 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47686,7 +47841,7 @@ module.exports = function isAbsoluteURL(url) {
 
 
 /***/ }),
-/* 43 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47707,13 +47862,13 @@ module.exports = function combineURLs(baseURL, relativeURL) {
 
 
 /***/ }),
-/* 44 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var Cancel = __webpack_require__(14);
+var Cancel = __webpack_require__(16);
 
 /**
  * A `CancelToken` is an object that can be used to request cancellation of an operation.
@@ -47771,7 +47926,7 @@ module.exports = CancelToken;
 
 
 /***/ }),
-/* 45 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47805,16 +47960,16 @@ module.exports = function spread(callback) {
 
 
 /***/ }),
-/* 46 */
+/* 48 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_vue__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_vue__ = __webpack_require__(17);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_vue_router__ = __webpack_require__(49);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__pages_AddListenings_vue__ = __webpack_require__(50);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_vue_router__ = __webpack_require__(51);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__pages_AddListenings_vue__ = __webpack_require__(52);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__pages_AddListenings_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__pages_AddListenings_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__pages_AllFilters_vue__ = __webpack_require__(193);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__pages_AllFilters_vue__ = __webpack_require__(168);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__pages_AllFilters_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__pages_AllFilters_vue__);
 
 
@@ -47838,7 +47993,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_1_vue_router__["a" /* default */]({
 /* harmony default export */ __webpack_exports__["a"] = (router);
 
 /***/ }),
-/* 47 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var scope = (typeof global !== "undefined" && global) ||
@@ -47894,7 +48049,7 @@ exports._unrefActive = exports.active = function(item) {
 };
 
 // setimmediate attaches itself to the global object
-__webpack_require__(48);
+__webpack_require__(50);
 // On some exotic environments, it's not clear which object `setimmediate` was
 // able to install onto.  Search each possibility in the same order as the
 // `setimmediate` library.
@@ -47908,7 +48063,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ }),
-/* 48 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -48098,10 +48253,10 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
     attachTo.clearImmediate = clearImmediate;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(10)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4), __webpack_require__(12)))
 
 /***/ }),
-/* 49 */
+/* 51 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -50726,15 +50881,15 @@ if (inBrowser && window.Vue) {
 
 
 /***/ }),
-/* 50 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(51)
+var __vue_script__ = __webpack_require__(53)
 /* template */
-var __vue_template__ = __webpack_require__(166)
+var __vue_template__ = __webpack_require__(167)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -50773,12 +50928,12 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 51 */
+/* 53 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_Wrapper_vue__ = __webpack_require__(52);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_Wrapper_vue__ = __webpack_require__(54);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_Wrapper_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__components_Wrapper_vue__);
 //
 //
@@ -50799,19 +50954,19 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 52 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(53)
+  __webpack_require__(55)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(56)
+var __vue_script__ = __webpack_require__(58)
 /* template */
-var __vue_template__ = __webpack_require__(165)
+var __vue_template__ = __webpack_require__(166)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -50850,17 +51005,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 53 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(54);
+var content = __webpack_require__(56);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("7eea6d00", content, false, {});
+var update = __webpack_require__(2)("7eea6d00", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -50876,10 +51031,10 @@ if(false) {
 }
 
 /***/ }),
-/* 54 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -50890,7 +51045,7 @@ exports.push([module.i, "\n#wrapper[data-v-4e742c78] {\n  display: -webkit-box;\
 
 
 /***/ }),
-/* 55 */
+/* 57 */
 /***/ (function(module, exports) {
 
 /**
@@ -50923,22 +51078,22 @@ module.exports = function listToStyles (parentId, list) {
 
 
 /***/ }),
-/* 56 */
+/* 58 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue__ = __webpack_require__(57);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue__ = __webpack_require__(59);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__searches_MobileBGCars_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_MobileBGBikes_vue__ = __webpack_require__(78);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_MobileBGBikes_vue__ = __webpack_require__(80);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_MobileBGBikes_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__searches_MobileBGBikes_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__searches_MobileBGBuses_vue__ = __webpack_require__(99);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__searches_MobileBGBuses_vue__ = __webpack_require__(101);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__searches_MobileBGBuses_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__searches_MobileBGBuses_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__searches_CarsBG_vue__ = __webpack_require__(120);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__searches_CarsBG_vue__ = __webpack_require__(122);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__searches_CarsBG_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__searches_CarsBG_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__searches_CarsBGBikes_vue__ = __webpack_require__(135);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__searches_CarsBGBikes_vue__ = __webpack_require__(136);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__searches_CarsBGBikes_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4__searches_CarsBGBikes_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__searches_CarsBGBuses_vue__ = __webpack_require__(150);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__searches_CarsBGBuses_vue__ = __webpack_require__(151);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__searches_CarsBGBuses_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__searches_CarsBGBuses_vue__);
 //
 //
@@ -51023,15 +51178,15 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 57 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(58)
+var __vue_script__ = __webpack_require__(60)
 /* template */
-var __vue_template__ = __webpack_require__(77)
+var __vue_template__ = __webpack_require__(79)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -51070,21 +51225,21 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 58 */
+/* 60 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGCars_Dropdown_vue__ = __webpack_require__(16);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGCars_Dropdown_vue__ = __webpack_require__(18);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGCars_Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__input_MobileBGCars_Dropdown_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGCars_Currency_vue__ = __webpack_require__(61);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGCars_Currency_vue__ = __webpack_require__(63);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGCars_Currency_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_MobileBGCars_Currency_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGCars_BetweenNumbers_vue__ = __webpack_require__(17);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGCars_BetweenNumbers_vue__ = __webpack_require__(19);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGCars_BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_MobileBGCars_BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGCars_Checkbox_vue__ = __webpack_require__(68);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGCars_Checkbox_vue__ = __webpack_require__(70);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGCars_Checkbox_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_MobileBGCars_Checkbox_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBGCars_js__ = __webpack_require__(73);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGCars_BrandModel_vue__ = __webpack_require__(74);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBGCars_js__ = __webpack_require__(75);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGCars_BrandModel_vue__ = __webpack_require__(76);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGCars_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__input_MobileBGCars_BrandModel_vue__);
 //
 //
@@ -51142,7 +51297,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 59 */
+/* 61 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -51172,7 +51327,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 60 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -51194,15 +51349,15 @@ if (false) {
 }
 
 /***/ }),
-/* 61 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(62)
+var __vue_script__ = __webpack_require__(64)
 /* template */
-var __vue_template__ = __webpack_require__(67)
+var __vue_template__ = __webpack_require__(69)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -51241,14 +51396,14 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 62 */
+/* 64 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__ = __webpack_require__(17);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__ = __webpack_require__(19);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__ = __webpack_require__(16);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__ = __webpack_require__(18);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__);
 //
 //
@@ -51277,17 +51432,17 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 63 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(64);
+var content = __webpack_require__(66);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("00eb2bb1", content, false, {});
+var update = __webpack_require__(2)("00eb2bb1", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -51303,10 +51458,10 @@ if(false) {
 }
 
 /***/ }),
-/* 64 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -51317,7 +51472,7 @@ exports.push([module.i, "\n.input[data-v-fff46caa] {\n  margin: 5px 0;\n}\n", ""
 
 
 /***/ }),
-/* 65 */
+/* 67 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -51374,7 +51529,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 66 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -51457,7 +51612,7 @@ if (false) {
 }
 
 /***/ }),
-/* 67 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -51510,19 +51665,19 @@ if (false) {
 }
 
 /***/ }),
-/* 68 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(69)
+  __webpack_require__(71)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(71)
+var __vue_script__ = __webpack_require__(73)
 /* template */
-var __vue_template__ = __webpack_require__(72)
+var __vue_template__ = __webpack_require__(74)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -51561,17 +51716,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 69 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(70);
+var content = __webpack_require__(72);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("0a35027a", content, false, {});
+var update = __webpack_require__(2)("0a35027a", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -51587,10 +51742,10 @@ if(false) {
 }
 
 /***/ }),
-/* 70 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -51601,7 +51756,7 @@ exports.push([module.i, "\n.input[data-v-6238548c] {\n  -webkit-box-flex: 1;\n  
 
 
 /***/ }),
-/* 71 */
+/* 73 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -51632,7 +51787,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 72 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -51657,7 +51812,7 @@ if (false) {
 }
 
 /***/ }),
-/* 73 */
+/* 75 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -51885,15 +52040,15 @@ var requiredFields = {
 });
 
 /***/ }),
-/* 74 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(75)
+var __vue_script__ = __webpack_require__(77)
 /* template */
-var __vue_template__ = __webpack_require__(76)
+var __vue_template__ = __webpack_require__(78)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -51932,7 +52087,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 75 */
+/* 77 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -51985,7 +52140,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 76 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52093,7 +52248,7 @@ if (false) {
 }
 
 /***/ }),
-/* 77 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52153,15 +52308,15 @@ if (false) {
 }
 
 /***/ }),
-/* 78 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(79)
+var __vue_script__ = __webpack_require__(81)
 /* template */
-var __vue_template__ = __webpack_require__(98)
+var __vue_template__ = __webpack_require__(100)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -52200,21 +52355,21 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 79 */
+/* 81 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGBikes_Dropdown_vue__ = __webpack_require__(18);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGBikes_Dropdown_vue__ = __webpack_require__(20);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGBikes_Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__input_MobileBGBikes_Dropdown_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGBikes_Currency_vue__ = __webpack_require__(82);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGBikes_Currency_vue__ = __webpack_require__(84);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGBikes_Currency_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_MobileBGBikes_Currency_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGBikes_BetweenNumbers_vue__ = __webpack_require__(19);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGBikes_BetweenNumbers_vue__ = __webpack_require__(21);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGBikes_BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_MobileBGBikes_BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGBikes_Checkbox_vue__ = __webpack_require__(89);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGBikes_Checkbox_vue__ = __webpack_require__(91);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGBikes_Checkbox_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_MobileBGBikes_Checkbox_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBGBikes_js__ = __webpack_require__(94);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGBikes_BrandModel_vue__ = __webpack_require__(95);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBGBikes_js__ = __webpack_require__(96);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGBikes_BrandModel_vue__ = __webpack_require__(97);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGBikes_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__input_MobileBGBikes_BrandModel_vue__);
 //
 //
@@ -52272,7 +52427,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 80 */
+/* 82 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -52302,7 +52457,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 81 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52324,15 +52479,15 @@ if (false) {
 }
 
 /***/ }),
-/* 82 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(83)
+var __vue_script__ = __webpack_require__(85)
 /* template */
-var __vue_template__ = __webpack_require__(88)
+var __vue_template__ = __webpack_require__(90)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -52371,14 +52526,14 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 83 */
+/* 85 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__ = __webpack_require__(19);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__ = __webpack_require__(21);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__ = __webpack_require__(18);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__ = __webpack_require__(20);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__);
 //
 //
@@ -52407,17 +52562,17 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 84 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(85);
+var content = __webpack_require__(87);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("56aa0d8c", content, false, {});
+var update = __webpack_require__(2)("56aa0d8c", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -52433,10 +52588,10 @@ if(false) {
 }
 
 /***/ }),
-/* 85 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -52447,7 +52602,7 @@ exports.push([module.i, "\n.input[data-v-61f8f4d4] {\n  margin: 5px 0;\n}\n", ""
 
 
 /***/ }),
-/* 86 */
+/* 88 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -52504,7 +52659,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 87 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52587,7 +52742,7 @@ if (false) {
 }
 
 /***/ }),
-/* 88 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52640,19 +52795,19 @@ if (false) {
 }
 
 /***/ }),
-/* 89 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(90)
+  __webpack_require__(92)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(92)
+var __vue_script__ = __webpack_require__(94)
 /* template */
-var __vue_template__ = __webpack_require__(93)
+var __vue_template__ = __webpack_require__(95)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -52691,17 +52846,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 90 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(91);
+var content = __webpack_require__(93);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("8799c166", content, false, {});
+var update = __webpack_require__(2)("8799c166", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -52717,10 +52872,10 @@ if(false) {
 }
 
 /***/ }),
-/* 91 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -52731,7 +52886,7 @@ exports.push([module.i, "\n.input[data-v-7cffc692] {\n  -webkit-box-flex: 1;\n  
 
 
 /***/ }),
-/* 92 */
+/* 94 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -52762,7 +52917,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 93 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52787,7 +52942,7 @@ if (false) {
 }
 
 /***/ }),
-/* 94 */
+/* 96 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -53025,15 +53180,15 @@ var requiredFields = {
 });
 
 /***/ }),
-/* 95 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(96)
+var __vue_script__ = __webpack_require__(98)
 /* template */
-var __vue_template__ = __webpack_require__(97)
+var __vue_template__ = __webpack_require__(99)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -53072,7 +53227,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 96 */
+/* 98 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -53125,7 +53280,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 97 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -53233,7 +53388,7 @@ if (false) {
 }
 
 /***/ }),
-/* 98 */
+/* 100 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -53293,15 +53448,15 @@ if (false) {
 }
 
 /***/ }),
-/* 99 */
+/* 101 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(100)
+var __vue_script__ = __webpack_require__(102)
 /* template */
-var __vue_template__ = __webpack_require__(119)
+var __vue_template__ = __webpack_require__(121)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -53340,21 +53495,21 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 100 */
+/* 102 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGBuses_Dropdown_vue__ = __webpack_require__(20);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGBuses_Dropdown_vue__ = __webpack_require__(22);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__input_MobileBGBuses_Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__input_MobileBGBuses_Dropdown_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGBuses_Currency_vue__ = __webpack_require__(103);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGBuses_Currency_vue__ = __webpack_require__(105);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_MobileBGBuses_Currency_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_MobileBGBuses_Currency_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGBuses_BetweenNumbers_vue__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGBuses_BetweenNumbers_vue__ = __webpack_require__(23);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_MobileBGBuses_BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_MobileBGBuses_BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGBuses_Checkbox_vue__ = __webpack_require__(110);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGBuses_Checkbox_vue__ = __webpack_require__(112);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_MobileBGBuses_Checkbox_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_MobileBGBuses_Checkbox_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBGBuses_js__ = __webpack_require__(115);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGBuses_BrandModel_vue__ = __webpack_require__(116);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__data_MobileBGBuses_js__ = __webpack_require__(117);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGBuses_BrandModel_vue__ = __webpack_require__(118);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__input_MobileBGBuses_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__input_MobileBGBuses_BrandModel_vue__);
 //
 //
@@ -53412,7 +53567,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 101 */
+/* 103 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -53442,7 +53597,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 102 */
+/* 104 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -53464,15 +53619,15 @@ if (false) {
 }
 
 /***/ }),
-/* 103 */
+/* 105 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(104)
+var __vue_script__ = __webpack_require__(106)
 /* template */
-var __vue_template__ = __webpack_require__(109)
+var __vue_template__ = __webpack_require__(111)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -53511,14 +53666,14 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 104 */
+/* 106 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__ = __webpack_require__(23);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__BetweenNumbers_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__ = __webpack_require__(20);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__ = __webpack_require__(22);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Dropdown_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__Dropdown_vue__);
 //
 //
@@ -53547,17 +53702,17 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 105 */
+/* 107 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(106);
+var content = __webpack_require__(108);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("6e390677", content, false, {});
+var update = __webpack_require__(2)("6e390677", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -53573,10 +53728,10 @@ if(false) {
 }
 
 /***/ }),
-/* 106 */
+/* 108 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -53587,7 +53742,7 @@ exports.push([module.i, "\n.input[data-v-7d84899a] {\n  margin: 5px 0;\n}\n", ""
 
 
 /***/ }),
-/* 107 */
+/* 109 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -53644,7 +53799,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 108 */
+/* 110 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -53727,7 +53882,7 @@ if (false) {
 }
 
 /***/ }),
-/* 109 */
+/* 111 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -53780,19 +53935,19 @@ if (false) {
 }
 
 /***/ }),
-/* 110 */
+/* 112 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(111)
+  __webpack_require__(113)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(113)
+var __vue_script__ = __webpack_require__(115)
 /* template */
-var __vue_template__ = __webpack_require__(114)
+var __vue_template__ = __webpack_require__(116)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -53831,17 +53986,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 111 */
+/* 113 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(112);
+var content = __webpack_require__(114);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("2844c43b", content, false, {});
+var update = __webpack_require__(2)("2844c43b", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -53857,10 +54012,10 @@ if(false) {
 }
 
 /***/ }),
-/* 112 */
+/* 114 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -53871,7 +54026,7 @@ exports.push([module.i, "\n.input[data-v-d3f5188a] {\n  -webkit-box-flex: 1;\n  
 
 
 /***/ }),
-/* 113 */
+/* 115 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -53902,7 +54057,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 114 */
+/* 116 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -53927,7 +54082,7 @@ if (false) {
 }
 
 /***/ }),
-/* 115 */
+/* 117 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -54089,15 +54244,15 @@ var requiredFields = {
 });
 
 /***/ }),
-/* 116 */
+/* 118 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(117)
+var __vue_script__ = __webpack_require__(119)
 /* template */
-var __vue_template__ = __webpack_require__(118)
+var __vue_template__ = __webpack_require__(120)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -54136,7 +54291,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 117 */
+/* 119 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -54189,7 +54344,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 118 */
+/* 120 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -54297,7 +54452,7 @@ if (false) {
 }
 
 /***/ }),
-/* 119 */
+/* 121 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -54357,15 +54512,15 @@ if (false) {
 }
 
 /***/ }),
-/* 120 */
+/* 122 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(121)
+var __vue_script__ = __webpack_require__(123)
 /* template */
-var __vue_template__ = __webpack_require__(134)
+var __vue_template__ = __webpack_require__(135)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -54404,17 +54559,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 121 */
+/* 123 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__data_CarsBG_js__ = __webpack_require__(122);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBG_BrandModel_vue__ = __webpack_require__(123);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__data_CarsBG_js__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBG_BrandModel_vue__ = __webpack_require__(124);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBG_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_CarsBG_BrandModel_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBG_Years_vue__ = __webpack_require__(128);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBG_Years_vue__ = __webpack_require__(129);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBG_Years_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_CarsBG_Years_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBG_Price_vue__ = __webpack_require__(131);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBG_Price_vue__ = __webpack_require__(132);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBG_Price_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_CarsBG_Price_vue__);
 //
 //
@@ -54459,127 +54614,19 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 122 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony default export */ __webpack_exports__["a"] = ({
-    defaultStorage: {
-        brandId: null
-    },
-    inputs: {
-        brands: {
-            0: "- Всички -",
-            1: "Acura",
-            2: "Aixam",
-            3: "Aro",
-            4: "Alfa Romeo",
-            6: "Asia Motors",
-            7: "Aston Martin",
-            8: "Audi",
-            9: "Bentley",
-            10: "BMW",
-            11: "Brilliance",
-            13: "Buick",
-            14: "Cadillac",
-            15: "Chevrolet",
-            16: "Chrysler",
-            17: "Citroen",
-            19: "Dacia",
-            20: "Daewoo",
-            21: "Daihatsu",
-            22: "Datsun",
-            23: "Dodge",
-            24: "Ferrari",
-            25: "Fiat",
-            26: "Ford",
-            27: "GAZ",
-            29: "GMC",
-            30: "Great wall",
-            31: "Honda",
-            32: "Hummer",
-            33: "Hyundai",
-            34: "Infiniti",
-            35: "Isuzu",
-            36: "Jaguar",
-            37: "Jeep",
-            38: "Kia",
-            40: "Lada",
-            41: "Lamborghini",
-            42: "Lancia",
-            43: "Land Rover",
-            45: "Lexus",
-            47: "Lincoln",
-            49: "Mahindra",
-            50: "Maserati",
-            52: "Maybach",
-            53: "Mazda",
-            54: "Mercedes-Benz",
-            55: "MG",
-            56: "Mini",
-            57: "Mitsubishi",
-            59: "Moskvich",
-            60: "Nissan",
-            61: "Oldsmobile",
-            63: "Opel",
-            64: "Peugeot",
-            65: "Piaggio",
-            66: "Plymouth",
-            67: "Pontiac",
-            68: "Porsche",
-            69: "Renault",
-            70: "Rolls Royce",
-            71: "Rover",
-            72: "Seat",
-            73: "Skoda",
-            74: "Smart",
-            75: "Ssangyong",
-            76: "Subaru",
-            77: "Suzuki",
-            78: "Talbot",
-            79: "Tata",
-            80: "Toyota",
-            81: "Trabant",
-            84: "Volga",
-            85: "Volvo",
-            86: "VW",
-            87: "Wartburg",
-            89: "UAZ",
-            90: "Zastava",
-            91: "Zaz",
-            92: "Saab",
-            95: "Scion",
-            97: "Iveco",
-            99: "Shuanghuan",
-            102: "Варшава",
-            105: "Microcar",
-            106: "Range Rover",
-            107: "ВАЗ",
-            123: "DR",
-            126: "McLaren",
-            127: "Gac Gonow",
-            128: "Austin",
-            129: "Tesla",
-            134: "Yogomo",
-            137: "Haval"
-        }
-    }
-});
-
-/***/ }),
-/* 123 */
+/* 124 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(124)
+  __webpack_require__(125)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(126)
+var __vue_script__ = __webpack_require__(127)
 /* template */
-var __vue_template__ = __webpack_require__(127)
+var __vue_template__ = __webpack_require__(128)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -54618,17 +54665,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 124 */
+/* 125 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(125);
+var content = __webpack_require__(126);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("d5af6a1a", content, false, {});
+var update = __webpack_require__(2)("d5af6a1a", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -54644,10 +54691,10 @@ if(false) {
 }
 
 /***/ }),
-/* 125 */
+/* 126 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -54658,7 +54705,7 @@ exports.push([module.i, "\n.full-width {\n  width: 100%;\n}\n.three-on-row {\n  
 
 
 /***/ }),
-/* 126 */
+/* 127 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -54735,7 +54782,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 127 */
+/* 128 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -54861,15 +54908,15 @@ if (false) {
 }
 
 /***/ }),
-/* 128 */
+/* 129 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(129)
+var __vue_script__ = __webpack_require__(130)
 /* template */
-var __vue_template__ = __webpack_require__(130)
+var __vue_template__ = __webpack_require__(131)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -54908,7 +54955,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 129 */
+/* 130 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -54957,7 +55004,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 130 */
+/* 131 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -55039,15 +55086,15 @@ if (false) {
 }
 
 /***/ }),
-/* 131 */
+/* 132 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(132)
+var __vue_script__ = __webpack_require__(133)
 /* template */
-var __vue_template__ = __webpack_require__(133)
+var __vue_template__ = __webpack_require__(134)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -55086,7 +55133,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 132 */
+/* 133 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -55140,7 +55187,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 133 */
+/* 134 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -55237,7 +55284,7 @@ if (false) {
 }
 
 /***/ }),
-/* 134 */
+/* 135 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -55274,15 +55321,15 @@ if (false) {
 }
 
 /***/ }),
-/* 135 */
+/* 136 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(136)
+var __vue_script__ = __webpack_require__(137)
 /* template */
-var __vue_template__ = __webpack_require__(149)
+var __vue_template__ = __webpack_require__(150)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -55321,17 +55368,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 136 */
+/* 137 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__data_CarsBgBikes_js__ = __webpack_require__(137);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBGBikes_BrandModel_vue__ = __webpack_require__(138);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__data_CarsBgBikes_js__ = __webpack_require__(138);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBGBikes_BrandModel_vue__ = __webpack_require__(139);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBGBikes_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_CarsBGBikes_BrandModel_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBGBikes_Years_vue__ = __webpack_require__(143);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBGBikes_Years_vue__ = __webpack_require__(144);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBGBikes_Years_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_CarsBGBikes_Years_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBGBikes_Price_vue__ = __webpack_require__(146);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBGBikes_Price_vue__ = __webpack_require__(147);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBGBikes_Price_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_CarsBGBikes_Price_vue__);
 //
 //
@@ -55376,207 +55423,207 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 137 */
+/* 138 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony default export */ __webpack_exports__["a"] = ({
-    defaultStorage: {
-        brand_motoId: null,
-        model_moto: ''
+    "defaultStorage": {
+        "brand_motoId": null,
+        "model_moto": ''
     },
-    inputs: {
-        brands: {
-            0: "- Изберете -",
-            1: "Aeon",
-            2: "Aprilia",
-            143: "Arctic",
-            170: "Argo",
-            3: "Atala",
-            4: "Avo",
-            5: "Babeta",
-            6: "Balkan",
-            7: "Baotian",
-            148: "Bashan",
-            8: "Benneli",
-            10: "Benzhou",
-            9: "Beta",
-            11: "Bmw",
-            12: "Bombardier",
-            13: "Bora",
-            173: "Bucci",
-            14: "Buell",
-            15: "Cagiva",
-            16: "Can-am",
-            17: "Cax",
-            18: "Cfmoto",
-            19: "Chimatti",
-            20: "Chin",
-            21: "Chung",
-            22: "Cpi",
-            163: "CRG",
-            23: "Cz",
-            24: "Daelim",
-            25: "Delta",
-            26: "Derbi",
-            153: "DINLI",
-            27: "Dkw",
-            28: "Dneper",
-            29: "Ducati",
-            30: "Egl",
-            31: "Etz",
-            171: "Explorer",
-            32: "Falcon",
-            33: "Fantik",
-            34: "Fym",
-            35: "Galeri",
-            36: "Gareli",
-            37: "Gas gas",
-            147: "GELY",
-            38: "Genata",
-            154: "Generic",
-            39: "Geo ming",
-            40: "Gilera",
-            41: "Go-ped",
-            42: "Harley",
-            43: "Herkules",
-            157: "HiSUN",
-            44: "Honda",
-            161: "Hupper",
-            45: "Husaberg",
-            46: "Huskvarna",
-            47: "Hyosung",
-            48: "Ifa",
-            49: "Irbib",
-            50: "Irbit",
-            51: "Italjet",
-            52: "Jawa",
-            53: "Jianshe",
-            54: "Jinlun",
-            152: "JOCSPORT",
-            159: "Jonway",
-            55: "Kagiva",
-            56: "Karpati",
-            57: "Kawasaki",
-            58: "Keeway",
-            60: "Kinetic",
-            61: "Ktm",
-            59: "Kymco",
-            150: "Lantana",
-            62: "Laverda",
-            63: "Ly-gig",
-            65: "Malaguti",
-            66: "Mb",
-            67: "Mbk",
-            155: "Mikilon",
-            68: "Minareli",
-            69: "Mini",
-            71: "Moto Guzzi",
-            70: "Motobim",
-            72: "Motomorini",
-            168: "MotorHispania",
-            146: "MTL",
-            73: "Mtz",
-            74: "Mulan",
-            142: "Multistrada",
-            64: "MV AGUSTA",
-            75: "Mz",
-            151: "NBLOCK",
-            77: "Nsu",
-            78: "Oral",
-            79: "Panonia",
-            80: "Peugeot",
-            81: "Piaggio",
-            82: "Pocketbike",
-            83: "Polaris",
-            165: "Polini Motori",
-            84: "Qm",
-            172: "Rewaco",
-            85: "Rex",
-            167: "Rieju",
-            86: "Riga",
-            87: "Romet",
-            144: "SACHS",
-            88: "Saks",
-            89: "Sampo",
-            90: "Sandiro",
-            91: "Sanyang",
-            92: "Sax",
-            93: "Scato",
-            94: "Scoot",
-            95: "Shineray",
-            96: "Simson",
-            166: "Ski-Doo",
-            160: "Sonik",
-            97: "Staer",
-            98: "Stella",
-            99: "Stz",
-            100: "Sundiro",
-            101: "Suzuki",
-            102: "Swm",
-            103: "Sym",
-            104: "Tandirо",
-            105: "Tango",
-            106: "Tatran",
-            162: "Tauris",
-            107: "Tgb",
-            108: "Tm",
-            109: "Tomus",
-            110: "Tonaro",
-            111: "Triumph",
-            112: "Truva",
-            113: "Tula",
-            114: "Tzun",
-            169: "Ugbest",
-            115: "Ural",
-            116: "Vanetti",
-            117: "Vespa",
-            164: "Victory",
-            158: "Vromos",
-            149: "Wangye Tokimoto",
-            118: "Wt",
-            119: "Wuxi",
-            120: "Xingyu",
-            121: "Xingyue",
-            122: "Xinshun",
-            123: "Yamaha",
-            124: "Yawa",
-            145: "YIBEN",
-            125: "Yuki",
-            126: "Zongshen",
-            127: "Zundab",
-            128: "Аvо",
-            129: "Возход",
-            130: "Вятка",
-            131: "Днепър",
-            132: "Дунавия",
-            133: "Иж",
-            134: "Калинка",
-            135: "Ковровец",
-            136: "М-62",
-            137: "М-70",
-            138: "М-72",
-            139: "Минск",
-            140: "Пух",
-            141: "Урал"
+    "inputs": {
+        "brands": {
+            "0": "- Изберете -",
+            "1": "Aeon",
+            "2": "Aprilia",
+            "143": "Arctic",
+            "170": "Argo",
+            "3": "Atala",
+            "4": "Avo",
+            "5": "Babeta",
+            "6": "Balkan",
+            "7": "Baotian",
+            "148": "Bashan",
+            "8": "Benneli",
+            "10": "Benzhou",
+            "9": "Beta",
+            "11": "Bmw",
+            "12": "Bombardier",
+            "13": "Bora",
+            "173": "Bucci",
+            "14": "Buell",
+            "15": "Cagiva",
+            "16": "Can-am",
+            "17": "Cax",
+            "18": "Cfmoto",
+            "19": "Chimatti",
+            "20": "Chin",
+            "21": "Chung",
+            "22": "Cpi",
+            "163": "CRG",
+            "23": "Cz",
+            "24": "Daelim",
+            "25": "Delta",
+            "26": "Derbi",
+            "153": "DINLI",
+            "27": "Dkw",
+            "28": "Dneper",
+            "29": "Ducati",
+            "30": "Egl",
+            "31": "Etz",
+            "171": "Explorer",
+            "32": "Falcon",
+            "33": "Fantik",
+            "34": "Fym",
+            "35": "Galeri",
+            "36": "Gareli",
+            "37": "Gas gas",
+            "147": "GELY",
+            "38": "Genata",
+            "154": "Generic",
+            "39": "Geo ming",
+            "40": "Gilera",
+            "41": "Go-ped",
+            "42": "Harley",
+            "43": "Herkules",
+            "157": "HiSUN",
+            "44": "Honda",
+            "161": "Hupper",
+            "45": "Husaberg",
+            "46": "Huskvarna",
+            "47": "Hyosung",
+            "48": "Ifa",
+            "49": "Irbib",
+            "50": "Irbit",
+            "51": "Italjet",
+            "52": "Jawa",
+            "53": "Jianshe",
+            "54": "Jinlun",
+            "152": "JOCSPORT",
+            "159": "Jonway",
+            "55": "Kagiva",
+            "56": "Karpati",
+            "57": "Kawasaki",
+            "58": "Keeway",
+            "60": "Kinetic",
+            "61": "Ktm",
+            "59": "Kymco",
+            "150": "Lantana",
+            "62": "Laverda",
+            "63": "Ly-gig",
+            "65": "Malaguti",
+            "66": "Mb",
+            "67": "Mbk",
+            "155": "Mikilon",
+            "68": "Minareli",
+            "69": "Mini",
+            "71": "Moto Guzzi",
+            "70": "Motobim",
+            "72": "Motomorini",
+            "168": "MotorHispania",
+            "146": "MTL",
+            "73": "Mtz",
+            "74": "Mulan",
+            "142": "Multistrada",
+            "64": "MV AGUSTA",
+            "75": "Mz",
+            "151": "NBLOCK",
+            "77": "Nsu",
+            "78": "Oral",
+            "79": "Panonia",
+            "80": "Peugeot",
+            "81": "Piaggio",
+            "82": "Pocketbike",
+            "83": "Polaris",
+            "165": "Polini Motori",
+            "84": "Qm",
+            "172": "Rewaco",
+            "85": "Rex",
+            "167": "Rieju",
+            "86": "Riga",
+            "87": "Romet",
+            "144": "SACHS",
+            "88": "Saks",
+            "89": "Sampo",
+            "90": "Sandiro",
+            "91": "Sanyang",
+            "92": "Sax",
+            "93": "Scato",
+            "94": "Scoot",
+            "95": "Shineray",
+            "96": "Simson",
+            "166": "Ski-Doo",
+            "160": "Sonik",
+            "97": "Staer",
+            "98": "Stella",
+            "99": "Stz",
+            "100": "Sundiro",
+            "101": "Suzuki",
+            "102": "Swm",
+            "103": "Sym",
+            "104": "Tandirо",
+            "105": "Tango",
+            "106": "Tatran",
+            "162": "Tauris",
+            "107": "Tgb",
+            "108": "Tm",
+            "109": "Tomus",
+            "110": "Tonaro",
+            "111": "Triumph",
+            "112": "Truva",
+            "113": "Tula",
+            "114": "Tzun",
+            "169": "Ugbest",
+            "115": "Ural",
+            "116": "Vanetti",
+            "117": "Vespa",
+            "164": "Victory",
+            "158": "Vromos",
+            "149": "Wangye Tokimoto",
+            "118": "Wt",
+            "119": "Wuxi",
+            "120": "Xingyu",
+            "121": "Xingyue",
+            "122": "Xinshun",
+            "123": "Yamaha",
+            "124": "Yawa",
+            "145": "YIBEN",
+            "125": "Yuki",
+            "126": "Zongshen",
+            "127": "Zundab",
+            "128": "Аvо",
+            "129": "Возход",
+            "130": "Вятка",
+            "131": "Днепър",
+            "132": "Дунавия",
+            "133": "Иж",
+            "134": "Калинка",
+            "135": "Ковровец",
+            "136": "М-62",
+            "137": "М-70",
+            "138": "М-72",
+            "139": "Минск",
+            "140": "Пух",
+            "141": "Урал"
         }
     }
 });
 
 /***/ }),
-/* 138 */
+/* 139 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(139)
+  __webpack_require__(140)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(141)
+var __vue_script__ = __webpack_require__(142)
 /* template */
-var __vue_template__ = __webpack_require__(142)
+var __vue_template__ = __webpack_require__(143)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -55615,17 +55662,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 139 */
+/* 140 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(140);
+var content = __webpack_require__(141);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("62c8c1b5", content, false, {});
+var update = __webpack_require__(2)("62c8c1b5", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -55641,10 +55688,10 @@ if(false) {
 }
 
 /***/ }),
-/* 140 */
+/* 141 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -55655,7 +55702,7 @@ exports.push([module.i, "\n.full-width {\n  width: 100%;\n}\n.three-on-row {\n  
 
 
 /***/ }),
-/* 141 */
+/* 142 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -55702,7 +55749,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 142 */
+/* 143 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -55789,15 +55836,15 @@ if (false) {
 }
 
 /***/ }),
-/* 143 */
+/* 144 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(144)
+var __vue_script__ = __webpack_require__(145)
 /* template */
-var __vue_template__ = __webpack_require__(145)
+var __vue_template__ = __webpack_require__(146)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -55836,7 +55883,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 144 */
+/* 145 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -55885,7 +55932,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 145 */
+/* 146 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -55967,15 +56014,15 @@ if (false) {
 }
 
 /***/ }),
-/* 146 */
+/* 147 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(147)
+var __vue_script__ = __webpack_require__(148)
 /* template */
-var __vue_template__ = __webpack_require__(148)
+var __vue_template__ = __webpack_require__(149)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -56014,7 +56061,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 147 */
+/* 148 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -56068,7 +56115,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 148 */
+/* 149 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -56165,7 +56212,7 @@ if (false) {
 }
 
 /***/ }),
-/* 149 */
+/* 150 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -56202,15 +56249,15 @@ if (false) {
 }
 
 /***/ }),
-/* 150 */
+/* 151 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(151)
+var __vue_script__ = __webpack_require__(152)
 /* template */
-var __vue_template__ = __webpack_require__(164)
+var __vue_template__ = __webpack_require__(165)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -56249,17 +56296,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 151 */
+/* 152 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__data_CarsBgBuses_js__ = __webpack_require__(152);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBGBuses_BrandModel_vue__ = __webpack_require__(153);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__data_CarsBgBuses_js__ = __webpack_require__(153);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBGBuses_BrandModel_vue__ = __webpack_require__(154);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__input_CarsBGBuses_BrandModel_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__input_CarsBGBuses_BrandModel_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBGBuses_Years_vue__ = __webpack_require__(158);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBGBuses_Years_vue__ = __webpack_require__(159);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__input_CarsBGBuses_Years_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__input_CarsBGBuses_Years_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBGBuses_Price_vue__ = __webpack_require__(161);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBGBuses_Price_vue__ = __webpack_require__(162);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__input_CarsBGBuses_Price_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__input_CarsBGBuses_Price_vue__);
 //
 //
@@ -56304,76 +56351,76 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 152 */
+/* 153 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony default export */ __webpack_exports__["a"] = ({
-    defaultStorage: {
-        brandId: null
+    "defaultStorage": {
+        "brandId": null
     },
-    inputs: {
-        brands: {
-            0: "- Всички -",
-            135: "Bedford",
-            132: "Bova",
-            14: "Cadillac",
-            15: "Chevrolet",
-            16: "Chrysler",
-            17: "Citroen",
-            20: "Daewoo",
-            93: "DAF",
-            21: "Daihatsu",
-            25: "Fiat",
-            26: "Ford",
-            27: "GAZ",
-            29: "GMC",
-            33: "Hyundai",
-            35: "Isuzu",
-            97: "Iveco",
-            38: "Kia",
-            42: "Lancia",
-            131: "Latvia",
-            112: "LDV",
-            125: "MAN",
-            53: "Mazda",
-            54: "Mercedes-Benz",
-            57: "Mitsubishi",
-            120: "Neoplan",
-            60: "Nissan",
-            63: "Opel",
-            64: "Peugeot",
-            65: "Piaggio",
-            69: "Renault",
-            72: "Seat",
-            100: "Setra",
-            76: "Subaru",
-            77: "Suzuki",
-            108: "Tempo",
-            118: "Temsa",
-            80: "Toyota",
-            89: "UAZ",
-            85: "Volvo",
-            86: "VW",
-            87: "Wartburg"
+    "inputs": {
+        "brands": {
+            "0": "- Всички -",
+            "135": "Bedford",
+            "132": "Bova",
+            "14": "Cadillac",
+            "15": "Chevrolet",
+            "16": "Chrysler",
+            "17": "Citroen",
+            "20": "Daewoo",
+            "93": "DAF",
+            "21": "Daihatsu",
+            "25": "Fiat",
+            "26": "Ford",
+            "27": "GAZ",
+            "29": "GMC",
+            "33": "Hyundai",
+            "35": "Isuzu",
+            "97": "Iveco",
+            "38": "Kia",
+            "42": "Lancia",
+            "131": "Latvia",
+            "112": "LDV",
+            "125": "MAN",
+            "53": "Mazda",
+            "54": "Mercedes-Benz",
+            "57": "Mitsubishi",
+            "120": "Neoplan",
+            "60": "Nissan",
+            "63": "Opel",
+            "64": "Peugeot",
+            "65": "Piaggio",
+            "69": "Renault",
+            "72": "Seat",
+            "100": "Setra",
+            "76": "Subaru",
+            "77": "Suzuki",
+            "108": "Tempo",
+            "118": "Temsa",
+            "80": "Toyota",
+            "89": "UAZ",
+            "85": "Volvo",
+            "86": "VW",
+            "87": "Wartburg"
         }
     }
 });
 
 /***/ }),
-/* 153 */
+/* 154 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(154)
+  __webpack_require__(155)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(156)
+var __vue_script__ = __webpack_require__(157)
 /* template */
-var __vue_template__ = __webpack_require__(157)
+var __vue_template__ = __webpack_require__(158)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -56412,17 +56459,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 154 */
+/* 155 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(155);
+var content = __webpack_require__(156);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("9bd31cc2", content, false, {});
+var update = __webpack_require__(2)("9bd31cc2", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -56438,10 +56485,10 @@ if(false) {
 }
 
 /***/ }),
-/* 155 */
+/* 156 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -56452,7 +56499,7 @@ exports.push([module.i, "\n.full-width {\n  width: 100%;\n}\n.three-on-row {\n  
 
 
 /***/ }),
-/* 156 */
+/* 157 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -56529,7 +56576,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 157 */
+/* 158 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -56655,15 +56702,15 @@ if (false) {
 }
 
 /***/ }),
-/* 158 */
+/* 159 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(159)
+var __vue_script__ = __webpack_require__(160)
 /* template */
-var __vue_template__ = __webpack_require__(160)
+var __vue_template__ = __webpack_require__(161)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -56702,7 +56749,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 159 */
+/* 160 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -56751,7 +56798,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 160 */
+/* 161 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -56833,15 +56880,15 @@ if (false) {
 }
 
 /***/ }),
-/* 161 */
+/* 162 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(162)
+var __vue_script__ = __webpack_require__(163)
 /* template */
-var __vue_template__ = __webpack_require__(163)
+var __vue_template__ = __webpack_require__(164)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -56880,7 +56927,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 162 */
+/* 163 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -56934,7 +56981,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 163 */
+/* 164 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -57031,7 +57078,7 @@ if (false) {
 }
 
 /***/ }),
-/* 164 */
+/* 165 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -57068,7 +57115,7 @@ if (false) {
 }
 
 /***/ }),
-/* 165 */
+/* 166 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -57089,7 +57136,9 @@ var render = function() {
                 {
                   on: {
                     click: function($event) {
-                      _vm.index != 0 ? _vm.index-- : _vm.index++
+                      _vm.index != 0
+                        ? _vm.index--
+                        : (_vm.index = _vm.searches.length - 1)
                     }
                   }
                 },
@@ -57103,7 +57152,9 @@ var render = function() {
                 {
                   on: {
                     click: function($event) {
-                      _vm.index++
+                      _vm.index > _vm.searches.length
+                        ? (_vm.index = 0)
+                        : _vm.index++
                     }
                   }
                 },
@@ -57170,7 +57221,7 @@ if (false) {
 }
 
 /***/ }),
-/* 166 */
+/* 167 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -57202,175 +57253,13 @@ if (false) {
 }
 
 /***/ }),
-/* 167 */,
-/* 168 */,
-/* 169 */,
-/* 170 */,
-/* 171 */,
-/* 172 */,
-/* 173 */,
-/* 174 */,
-/* 175 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(o){return typeof o}:function(o){return o&&"function"==typeof Symbol&&o.constructor===Symbol&&o!==Symbol.prototype?"symbol":typeof o};!function(){function o(e,t){if(!o.installed){if(o.installed=!0,!t)return void console.error("You have to install axios");e.axios=t,Object.defineProperties(e.prototype,{axios:{get:function(){return t}},$http:{get:function(){return t}}})}}"object"==( false?"undefined":_typeof(exports))?module.exports=o: true?!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = (function(){return o}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__)):window.Vue&&window.axios&&Vue.use(o,window.axios)}();
-
-/***/ }),
-/* 176 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(177)
-}
-var normalizeComponent = __webpack_require__(0)
-/* script */
-var __vue_script__ = __webpack_require__(179)
-/* template */
-var __vue_template__ = __webpack_require__(180)
-/* template functional */
-var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = injectStyle
-/* scopeId */
-var __vue_scopeId__ = null
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/js/components/App.vue"
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-332fccf4", Component.options)
-  } else {
-    hotAPI.reload("data-v-332fccf4", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 177 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(178);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(3)("106249c6", content, false, {});
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../node_modules/css-loader/index.js!../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-332fccf4\",\"scoped\":false,\"hasInlineConfig\":true}!../../../node_modules/sass-loader/lib/loader.js?indentedSyntax!../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./App.vue", function() {
-     var newContent = require("!!../../../node_modules/css-loader/index.js!../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-332fccf4\",\"scoped\":false,\"hasInlineConfig\":true}!../../../node_modules/sass-loader/lib/loader.js?indentedSyntax!../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./App.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 178 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(2)(false);
-// imports
-
-
-// module
-exports.push([module.i, "\n.input {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  margin: 0 auto;\n}\n.input * {\n    margin: auto;\n}\n.row {\n  border-top: 1px solid gray;\n  margin: 5px 0;\n  padding: 10px 0;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-pack: distribute;\n      justify-content: space-around;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n}\n.column {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: start;\n  border-top: 1px solid gray;\n  margin: 5px 0;\n  padding: 10px 0;\n}\n.error {\n  color: red;\n}\n.btn {\n  border: none;\n  border-radius: 7px;\n  padding: 4px 6px;\n  margin: 5px;\n}\n.btn.btn-success {\n    background-color: limegreen;\n    color: #000;\n}\n.btn.btn-info {\n    background-color: cyan;\n    color: black;\n}\n#app {\n  font-family: \"Avenir\", Helvetica, Arial, sans-serif;\n  -webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;\n  text-align: center;\n  color: #2c3e50;\n  width: 100vw;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 179 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-//
-//
-//
-//
-//
-//
-
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    name: 'app'
-});
-
-/***/ }),
-/* 180 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", { attrs: { id: "app" } }, [_c("router-view")], 1)
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-332fccf4", module.exports)
-  }
-}
-
-/***/ }),
-/* 181 */
-/***/ (function(module, exports) {
-
-// removed by extract-text-webpack-plugin
-
-/***/ }),
-/* 182 */,
-/* 183 */,
-/* 184 */,
-/* 185 */,
-/* 186 */,
-/* 187 */,
-/* 188 */,
-/* 189 */,
-/* 190 */,
-/* 191 */,
-/* 192 */,
-/* 193 */
+/* 168 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(194)
+var __vue_script__ = __webpack_require__(169)
 /* template */
 var __vue_template__ = __webpack_require__(195)
 /* template functional */
@@ -57411,17 +57300,23 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 194 */
+/* 169 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_filterViews_MobileBGCars_vue__ = __webpack_require__(199);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_filterViews_MobileBGCars_vue__ = __webpack_require__(170);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_filterViews_MobileBGCars_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__components_filterViews_MobileBGCars_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__components_filterViews_MobileBGBikes_vue__ = __webpack_require__(204);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__components_filterViews_MobileBGBikes_vue__ = __webpack_require__(177);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__components_filterViews_MobileBGBikes_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__components_filterViews_MobileBGBikes_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__components_filterViews_MobileBGBuses_vue__ = __webpack_require__(209);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__components_filterViews_MobileBGBuses_vue__ = __webpack_require__(182);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__components_filterViews_MobileBGBuses_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__components_filterViews_MobileBGBuses_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__components_filterViews_CarsBGCars_vue__ = __webpack_require__(187);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__components_filterViews_CarsBGCars_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__components_filterViews_CarsBGCars_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__components_filterViews_CarsBGBikes_vue__ = __webpack_require__(212);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__components_filterViews_CarsBGBikes_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4__components_filterViews_CarsBGBikes_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__components_filterViews_CarsBGBuses_vue__ = __webpack_require__(207);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__components_filterViews_CarsBGBuses_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__components_filterViews_CarsBGBuses_vue__);
 //
 //
 //
@@ -57434,6 +57329,14 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
+//
+//
+//
+//
+//
+
+
+
 
 
 
@@ -57444,66 +57347,33 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     components: {
         MobileBGCarsView: __WEBPACK_IMPORTED_MODULE_0__components_filterViews_MobileBGCars_vue___default.a,
         MobileBGBikesView: __WEBPACK_IMPORTED_MODULE_1__components_filterViews_MobileBGBikes_vue___default.a,
-        MobileBGBusesView: __WEBPACK_IMPORTED_MODULE_2__components_filterViews_MobileBGBuses_vue___default.a
+        MobileBGBusesView: __WEBPACK_IMPORTED_MODULE_2__components_filterViews_MobileBGBuses_vue___default.a,
+        CarsBGCarsView: __WEBPACK_IMPORTED_MODULE_3__components_filterViews_CarsBGCars_vue___default.a,
+        CarsBGBusesView: __WEBPACK_IMPORTED_MODULE_5__components_filterViews_CarsBGBuses_vue___default.a,
+        CarsBGBikesView: __WEBPACK_IMPORTED_MODULE_4__components_filterViews_CarsBGBikes_vue___default.a
     }
 });
 
 /***/ }),
-/* 195 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c(
-    "div",
-    [
-      _c("router-link", { attrs: { to: { name: "home" } } }, [
-        _vm._v("Go Back")
-      ]),
-      _vm._v(" "),
-      _c("MobileBGCarsView"),
-      _vm._v(" "),
-      _c("hr"),
-      _vm._v(" "),
-      _c("MobileBGBikesView"),
-      _vm._v(" "),
-      _c("hr"),
-      _vm._v(" "),
-      _c("MobileBGBusesView"),
-      _vm._v(" "),
-      _c("hr")
-    ],
-    1
-  )
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-6a6cdf3a", module.exports)
-  }
-}
-
-/***/ }),
-/* 196 */
+/* 170 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(171)
+}
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(197)
+var __vue_script__ = __webpack_require__(173)
 /* template */
-var __vue_template__ = __webpack_require__(198)
+var __vue_template__ = __webpack_require__(176)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
-var __vue_styles__ = null
+var __vue_styles__ = injectStyle
 /* scopeId */
-var __vue_scopeId__ = null
+var __vue_scopeId__ = "data-v-7b7937aa"
 /* moduleIdentifier (server only) */
 var __vue_module_identifier__ = null
 var Component = normalizeComponent(
@@ -57514,7 +57384,7 @@ var Component = normalizeComponent(
   __vue_scopeId__,
   __vue_module_identifier__
 )
-Component.options.__file = "resources/js/components/filterViews/MobileBG/Filter.vue"
+Component.options.__file = "resources/js/components/filterViews/MobileBGCars.vue"
 
 /* hot reload */
 if (false) {(function () {
@@ -57523,9 +57393,9 @@ if (false) {(function () {
   if (!hotAPI.compatible) return
   module.hot.accept()
   if (!module.hot.data) {
-    hotAPI.createRecord("data-v-b4900528", Component.options)
+    hotAPI.createRecord("data-v-7b7937aa", Component.options)
   } else {
-    hotAPI.reload("data-v-b4900528", Component.options)
+    hotAPI.reload("data-v-7b7937aa", Component.options)
   }
   module.hot.dispose(function (data) {
     disposed = true
@@ -57536,7 +57406,114 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 197 */
+/* 171 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(172);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(2)("566fe563", content, false, {});
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-7b7937aa\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MobileBGCars.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-7b7937aa\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MobileBGCars.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 172 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)(false);
+// imports
+
+
+// module
+exports.push([module.i, "\n#filters[data-v-7b7937aa] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: flex-start;\n}\n#filters .listening[data-v-7b7937aa] {\n    border-radius: 10px;\n    border: 1px solid black;\n    max-width: 300px;\n    padding: 10px;\n    margin: 10px;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 173 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "MobileBGCarsView",
+    components: {
+        mobileBGFilter: __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue___default.a
+    },
+    data: function data() {
+        return {
+            filters: [],
+            filtersStatus: 1
+        };
+    },
+    computed: {
+        hasListenings: function hasListenings() {
+            if (this.filters.length > 0) {
+                return true;
+            }
+            return false;
+        }
+    },
+    mounted: function mounted() {
+        this.setListenings();
+    },
+    methods: {
+        setListenings: function setListenings() {
+            var _this = this;
+
+            this.$http.get('/filters/MobileBG').then(function (_ref) {
+                var data = _ref.data;
+
+                _this.filtersStatus = 2;
+                _this.filters = data;
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 174 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -57606,7 +57583,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 198 */
+/* 175 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -57678,165 +57655,7 @@ if (false) {
 }
 
 /***/ }),
-/* 199 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(200)
-}
-var normalizeComponent = __webpack_require__(0)
-/* script */
-var __vue_script__ = __webpack_require__(202)
-/* template */
-var __vue_template__ = __webpack_require__(203)
-/* template functional */
-var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = injectStyle
-/* scopeId */
-var __vue_scopeId__ = "data-v-7b7937aa"
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/js/components/filterViews/MobileBGCars.vue"
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-7b7937aa", Component.options)
-  } else {
-    hotAPI.reload("data-v-7b7937aa", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 200 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(201);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(3)("566fe563", content, false, {});
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-7b7937aa\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MobileBGCars.vue", function() {
-     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-7b7937aa\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MobileBGCars.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 201 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(2)(false);
-// imports
-
-
-// module
-exports.push([module.i, "\n#filters[data-v-7b7937aa] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: flex-start;\n}\n#filters .listening[data-v-7b7937aa] {\n    border-radius: 10px;\n    border: 1px solid black;\n    max-width: 300px;\n    padding: 10px;\n    margin: 10px;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 202 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__ = __webpack_require__(196);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__);
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    name: "MobileBGCarsView",
-    components: {
-        mobileBGFilter: __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue___default.a
-    },
-    data: function data() {
-        return {
-            filters: [],
-            filtersStatus: 1
-        };
-    },
-    computed: {
-        hasListenings: function hasListenings() {
-            if (this.filters.length > 0) {
-                return true;
-            }
-            return false;
-        }
-    },
-    mounted: function mounted() {
-        this.setListenings();
-    },
-    methods: {
-        setListenings: function setListenings() {
-            var _this = this;
-
-            this.$http.get('/filters/MobileBG').then(function (_ref) {
-                var data = _ref.data;
-
-                _this.filtersStatus = 2;
-                _this.filters = data;
-            });
-        }
-    }
-});
-
-/***/ }),
-/* 203 */
+/* 176 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -57876,19 +57695,19 @@ if (false) {
 }
 
 /***/ }),
-/* 204 */
+/* 177 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(205)
+  __webpack_require__(178)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(207)
+var __vue_script__ = __webpack_require__(180)
 /* template */
-var __vue_template__ = __webpack_require__(208)
+var __vue_template__ = __webpack_require__(181)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -57927,17 +57746,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 205 */
+/* 178 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(206);
+var content = __webpack_require__(179);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("3776402c", content, false, {});
+var update = __webpack_require__(2)("3776402c", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -57953,10 +57772,10 @@ if(false) {
 }
 
 /***/ }),
-/* 206 */
+/* 179 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -57967,12 +57786,12 @@ exports.push([module.i, "\n#filters[data-v-17eedf37] {\n  display: -webkit-box;\
 
 
 /***/ }),
-/* 207 */
+/* 180 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__ = __webpack_require__(196);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__ = __webpack_require__(7);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__);
 //
 //
@@ -58034,7 +57853,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 208 */
+/* 181 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -58074,19 +57893,19 @@ if (false) {
 }
 
 /***/ }),
-/* 209 */
+/* 182 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(210)
+  __webpack_require__(183)
 }
 var normalizeComponent = __webpack_require__(0)
 /* script */
-var __vue_script__ = __webpack_require__(212)
+var __vue_script__ = __webpack_require__(185)
 /* template */
-var __vue_template__ = __webpack_require__(213)
+var __vue_template__ = __webpack_require__(186)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -58125,17 +57944,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 210 */
+/* 183 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(211);
+var content = __webpack_require__(184);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(3)("57a1ae61", content, false, {});
+var update = __webpack_require__(2)("57a1ae61", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -58151,10 +57970,10 @@ if(false) {
 }
 
 /***/ }),
-/* 211 */
+/* 184 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(2)(false);
+exports = module.exports = __webpack_require__(1)(false);
 // imports
 
 
@@ -58165,12 +57984,12 @@ exports.push([module.i, "\n#filters[data-v-c4a2589a] {\n  display: -webkit-box;\
 
 
 /***/ }),
-/* 212 */
+/* 185 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__ = __webpack_require__(196);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__ = __webpack_require__(7);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__MobileBG_Filter_vue__);
 //
 //
@@ -58232,7 +58051,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 213 */
+/* 186 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -58268,6 +58087,1470 @@ if (false) {
   module.hot.accept()
   if (module.hot.data) {
     require("vue-hot-reload-api")      .rerender("data-v-c4a2589a", module.exports)
+  }
+}
+
+/***/ }),
+/* 187 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(188)
+}
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(190)
+/* template */
+var __vue_template__ = __webpack_require__(194)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = injectStyle
+/* scopeId */
+var __vue_scopeId__ = "data-v-07041632"
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/CarsBGCars.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-07041632", Component.options)
+  } else {
+    hotAPI.reload("data-v-07041632", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 188 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(189);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(2)("1c5fef65", content, false, {});
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-07041632\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./CarsBGCars.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-07041632\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./CarsBGCars.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 189 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)(false);
+// imports
+
+
+// module
+exports.push([module.i, "\n#filters[data-v-07041632] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: flex-start;\n}\n#filters .filter[data-v-07041632] {\n    border-radius: 10px;\n    border: 1px solid black;\n    max-width: 300px;\n    padding: 10px;\n    margin: 10px;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 190 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilter_vue__ = __webpack_require__(191);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilter_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilter_vue__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_data_CarsBG__ = __webpack_require__(6);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "CarsBGCarsView",
+    components: {
+        mobileBGFilter: __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilter_vue___default.a
+    },
+    data: function data() {
+        return {
+            filters: [],
+            filtersStatus: 1,
+            brandModels: {
+                brands: __WEBPACK_IMPORTED_MODULE_1__searches_data_CarsBG__["a" /* default */].inputs.brands,
+                models: {},
+                getModels: function getModels(brand) {
+                    var _this = this;
+
+                    if (!this.models[brand]) {
+                        this.$http.get('/carsbg/models?brandId=' + this.storage['brandId']).then(function (resp) {
+                            _this.models = resp.data.models;
+                        });
+                    }
+                }
+            }
+        };
+    },
+    computed: {
+        hasListenings: function hasListenings() {
+            if (this.filters.length > 0) {
+                return true;
+            }
+            return false;
+        }
+    },
+    mounted: function mounted() {
+        this.setFilters();
+    },
+    methods: {
+        setFilters: function setFilters() {
+            var _this2 = this;
+
+            this.$http.get('/filters/CarsBG').then(function (_ref) {
+                var data = _ref.data;
+
+                _this2.filtersStatus = 2;
+                _this2.filters = data;
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 191 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(192)
+/* template */
+var __vue_template__ = __webpack_require__(193)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/CarsBG/CarFilter.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-296c90b6", Component.options)
+  } else {
+    hotAPI.reload("data-v-296c90b6", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 192 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBG_json__ = __webpack_require__(206);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBG_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBG_json__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_data_CarsBG_js__ = __webpack_require__(6);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+
+var brands = __WEBPACK_IMPORTED_MODULE_1__searches_data_CarsBG_js__["a" /* default */].inputs.brands;
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "CarsBGCarsFilter",
+    props: {
+        id: {
+            type: Number,
+            required: true
+        },
+        data: Object
+    },
+    computed: {
+        brand: function brand() {
+            return brands[this.data.search_params.brandId];
+        },
+        models: function models() {
+            var _this = this;
+
+            var modelNames = [];
+            this.data.search_params.models.forEach(function (id) {
+                modelNames.push(__WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBG_json___default.a[_this.data.search_params.brandId][id]);
+            });
+
+            return modelNames.join(' / ');
+        },
+        searchParams: function searchParams() {
+            var data = {};
+            if (this.data.search_params !== undefined) {
+                if (this.data.search_params['f5'] !== '') {
+                    data.brand = this.data.search_params['f5'];
+                    data.model = this.data.search_params['f6'];
+                }
+                if (this.data.search_params['f7'] !== '' || this.data.search_params['f8'] !== '') {
+                    data.startPrice = this.data.search_params['f7'];
+                    data.endPrice = this.data.search_params['f8'];
+                    data.currency = this.data.search_params['f9'];
+                }
+                if (this.data.search_params['f10'] !== '' || this.data.search_params['f11'] !== '') {
+                    data.startYear = this.data.search_params['f10'];
+                    data.endYear = this.data.search_params['f11'];
+                }
+            }
+
+            return data;
+        }
+    },
+    methods: {
+        remove: function remove() {
+            var _this2 = this;
+
+            this.$http.post('/filters/delete', {
+                filterId: this.id
+            }).then(function (res) {
+                if (res.data.success) {
+                    _this2.$emit('resetListenings');
+                }
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 193 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", { staticClass: "title" }, [_vm._v(_vm._s(this.data.type))]),
+    _vm._v(" "),
+    _c("div", { staticClass: "description" }, [
+      _c("p", [_vm._v("Brand: " + _vm._s(_vm.brand))]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Models:")]),
+      _vm._v(" "),
+      _c("p", [_vm._v(" " + _vm._s(_vm.models))]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "Price:\n            " +
+            _vm._s(_vm.searchParams.startPrice) +
+            _vm._s(
+              _vm.searchParams.startPrice ? _vm.searchParams.currency : ""
+            ) +
+            " -\n            " +
+            _vm._s(_vm.searchParams.endPrice) +
+            _vm._s(_vm.searchParams.endPrice ? _vm.searchParams.currency : "")
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "Year: " +
+            _vm._s(_vm.searchParams.startYear) +
+            " - " +
+            _vm._s(_vm.searchParams.endYear)
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr"),
+    _vm._v(" "),
+    _c("div", { staticClass: "actions" }, [
+      _c(
+        "div",
+        {
+          on: {
+            click: function($event) {
+              $event.stopPropagation()
+              return _vm.remove($event)
+            }
+          }
+        },
+        [_vm._v("Remove")]
+      )
+    ])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-296c90b6", module.exports)
+  }
+}
+
+/***/ }),
+/* 194 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("h2", { staticClass: "text-center" }, [_vm._v("CarsBG Cars")]),
+    _vm._v(" "),
+    _vm.filtersStatus === 2 && _vm.filters.length > 0
+      ? _c(
+          "div",
+          { attrs: { id: "filters" } },
+          _vm._l(_vm.filters, function(filter, index) {
+            return _c("mobileBGFilter", {
+              key: index,
+              staticClass: "filter",
+              attrs: {
+                id: filter.id,
+                data: filter,
+                brandModels: _vm.brandModels
+              },
+              on: { resetListenings: _vm.setFilters }
+            })
+          }),
+          1
+        )
+      : _vm.filtersStatus === 2 && _vm.filters.length === 0
+      ? _c("div", [_vm._v("\n        No filters found.\n    ")])
+      : _c("div", [_vm._v("\n        Loading . . .\n    ")])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-07041632", module.exports)
+  }
+}
+
+/***/ }),
+/* 195 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c(
+    "div",
+    [
+      _c("router-link", { attrs: { to: { name: "home" } } }, [
+        _vm._v("Go Back")
+      ]),
+      _vm._v(" "),
+      _c("MobileBGCarsView"),
+      _vm._v(" "),
+      _c("hr"),
+      _vm._v(" "),
+      _c("MobileBGBikesView"),
+      _vm._v(" "),
+      _c("hr"),
+      _vm._v(" "),
+      _c("MobileBGBusesView"),
+      _vm._v(" "),
+      _c("hr"),
+      _vm._v(" "),
+      _c("CarsBGCarsView"),
+      _vm._v(" "),
+      _c("hr"),
+      _vm._v(" "),
+      _c("CarsBGBikesView"),
+      _vm._v(" "),
+      _c("hr"),
+      _vm._v(" "),
+      _c("CarsBGBusesView")
+    ],
+    1
+  )
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-6a6cdf3a", module.exports)
+  }
+}
+
+/***/ }),
+/* 196 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(o){return typeof o}:function(o){return o&&"function"==typeof Symbol&&o.constructor===Symbol&&o!==Symbol.prototype?"symbol":typeof o};!function(){function o(e,t){if(!o.installed){if(o.installed=!0,!t)return void console.error("You have to install axios");e.axios=t,Object.defineProperties(e.prototype,{axios:{get:function(){return t}},$http:{get:function(){return t}}})}}"object"==( false?"undefined":_typeof(exports))?module.exports=o: true?!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = (function(){return o}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__)):window.Vue&&window.axios&&Vue.use(o,window.axios)}();
+
+/***/ }),
+/* 197 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(198)
+}
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(200)
+/* template */
+var __vue_template__ = __webpack_require__(201)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = injectStyle
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/App.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-332fccf4", Component.options)
+  } else {
+    hotAPI.reload("data-v-332fccf4", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 198 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(199);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(2)("106249c6", content, false, {});
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../node_modules/css-loader/index.js!../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-332fccf4\",\"scoped\":false,\"hasInlineConfig\":true}!../../../node_modules/sass-loader/lib/loader.js?indentedSyntax!../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./App.vue", function() {
+     var newContent = require("!!../../../node_modules/css-loader/index.js!../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-332fccf4\",\"scoped\":false,\"hasInlineConfig\":true}!../../../node_modules/sass-loader/lib/loader.js?indentedSyntax!../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./App.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 199 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)(false);
+// imports
+
+
+// module
+exports.push([module.i, "\n.input {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  margin: 0 auto;\n}\n.input * {\n    margin: auto;\n}\n.row {\n  border-top: 1px solid gray;\n  margin: 5px 0;\n  padding: 10px 0;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-pack: distribute;\n      justify-content: space-around;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n}\n.column {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: vertical;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: column;\n          flex-direction: column;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: start;\n  border-top: 1px solid gray;\n  margin: 5px 0;\n  padding: 10px 0;\n}\n.error {\n  color: red;\n}\n.btn {\n  border: none;\n  border-radius: 7px;\n  padding: 4px 6px;\n  margin: 5px;\n}\n.btn.btn-success {\n    background-color: limegreen;\n    color: #000;\n}\n.btn.btn-info {\n    background-color: cyan;\n    color: black;\n}\n#app {\n  font-family: \"Avenir\", Helvetica, Arial, sans-serif;\n  -webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;\n  text-align: center;\n  color: #2c3e50;\n  width: 100vw;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 200 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+//
+//
+//
+//
+//
+//
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: 'app'
+});
+
+/***/ }),
+/* 201 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", { attrs: { id: "app" } }, [_c("router-view")], 1)
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-332fccf4", module.exports)
+  }
+}
+
+/***/ }),
+/* 202 */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+/* 203 */,
+/* 204 */,
+/* 205 */,
+/* 206 */
+/***/ (function(module, exports) {
+
+module.exports = {"0":[],"1":{"2":"MDX","4":"RL","5":"RDX","7":"TL"},"2":{"9":"400"},"3":{"15":"246","1840":"461"},"4":{"21":"149","23":"145","24":"146","25":"147","26":"155","27":"156","28":"159","29":"164","30":"166","31":"33","32":"75","35":"Alfetta","36":"Brera","37":"Crosswagon","38":"Giulia","39":"Giulietta","40":"GT","41":"GTV","43":"MiTo","45":"Spider","1529":"159 SW","1694":"156 Sportwagon","2091":"Arna"},"6":{"57":"Rocsta"},"7":{"61":"DB9","64":"V8","65":"V8 Vantage","67":"Vantage"},"8":{"70":"100","72":"80","73":"90","74":"A2","75":"A3","76":"A4","77":"A4 Allroad","78":"A5","79":"A6","80":"A6 Allroad","81":"A8","82":"Q5","83":"Q7","84":"R8","86":"RS4","87":"RS6","88":"S2","89":"S3","90":"S4","91":"S5","92":"S6","93":"S8","94":"TT","95":"V8","1643":"A3 Sportback","1645":"S3 Sportback","1663":"A5 Sportback","1686":"Allroad","1687":"TT Roadster","1699":"A1","1703":"RS5","1719":"A7","1787":"Q3","1824":"RS3","1892":"S7","2022":"SQ5","2051":"RS7","2085":"Q2","2088":"SQ7","2123":"RSQ3","2184":"A1 Sportback","2185":"A7 Sportback","2191":"Q8","2219":"A4 Avant","2220":"A6 Avant","2221":"S5 Sportback"},"9":{"99":"Continental","101":"Mulsanne","1968":"Flying Spur","2033":"Bentayga"},"10":{"105":"116","106":"118","107":"120","108":"123","109":"125","110":"130","111":"135","113":"316","114":"318","115":"320","116":"323","117":"324","118":"325","119":"328","120":"330","121":"335","122":"518","123":"520","124":"523","125":"524","126":"525","127":"528","128":"530","129":"535","130":"540","131":"545","132":"550","134":"630","135":"633","136":"635","137":"645","138":"650","139":"725","140":"728","141":"730","143":"735","144":"740","145":"745","146":"750","147":"760","148":"840","149":"850","151":"M3","152":"M5","153":"M6","155":"Z4 M","156":"X3","157":"X5","158":"X6","160":"Z3","161":"Z4","1659":"X1","1660":"X5 M","1661":"X6 M","1730":"750IL","1760":"Bertone","1767":"640","1940":"420","1967":"i8","1969":"M235i","1970":"435i","1971":"430","1977":"428","1978":"220","1981":"X4","1985":"5 Gran Turismo","1986":"3 Gran Turismo","1989":"218","2041":"i3","2045":"M4","2067":"435","2089":"418","2090":"Gran Coupe","2103":"340","2106":"228","2116":"216","2117":"2 Gran Tourer","2180":"X2"},"11":{"165":"BS4"},"13":{"169":"Century","176":"Skylark","1634":"Rendezvous"},"14":{"178":"BLS","179":"CTS","180":"Deville","181":"Eldorado","182":"Escalade","183":"Fleetwood","184":"Seville","185":"SRX","186":"STS","1726":"BLC"},"15":{"189":"Alero","190":"Astro","191":"Avalanche","192":"Aveo","193":"Beretta","194":"Blazer","196":"Camaro","198":"Captiva","205":"Cruze","206":"Epica","207":"Equinox","208":"Evanda","209":"G","210":"HHR","211":"Impala","214":"Kalos","215":"Lacetti","217":"Malibu","218":"Matiz","219":"Niva","221":"Nubira","222":"Rezzo","223":"S-10","224":"Silverado","225":"Spark","227":"Suburban","228":"Tacuma","229":"Tahoe","230":"Trailblazer","231":"Trans Sport","232":"Venture","1578":"Corvette","1764":"Orlando","1830":"Volt","1891":"Cobalt","1939":"Trax"},"16":{"233":"300 M","234":"300C","235":"Crossfire","236":"Daytona","238":"Grand Voyager","241":"Le Baron","242":"Neon","243":"New Yorker","244":"Pacifica","245":"PT Cruiser","246":"Saratoga","247":"Sebring","248":"Stratus","251":"Vision","252":"Voyager"},"17":{"253":"2 CV","254":"AX","255":"Berlingo","256":"BX","257":"C-Crosser","258":"C1","259":"C2","260":"C3","261":"C4","262":"C4 Picasso","263":"C5","264":"C6","265":"C8","266":"CX","267":"DS","268":"Evasion","269":"Grand C4 Picasso","271":"Jumpy","272":"SAXO","275":"Xantia","276":"XM","277":"Xsara","278":"Xsara Picasso","279":"ZX","1545":"Jumper","1546":"Nemo","1577":"C3 Picasso","1672":"C5 NEW","1673":"Jumper II","1680":"C15","1691":"DS3","1743":"Jumpy II","1769":"C4 NEW","1790":"DS4","1837":"BerlingoFT","1900":"DS5","1905":"C-Elysee","1918":"C-Zero","1941":"C4 Aircross","1961":"Jumper III","1982":"C4 Cactus","2223":"C3 Aircross"},"19":{"286":"1300","289":"1310","291":"Logan","292":"Nova","293":"Pick Up","294":"Sandero","295":"Solenza","1682":"Duster","1881":"Lodgy","1912":"Dokker"},"20":{"299":"Espero","300":"Evanda","301":"Kalos","302":"Korando","303":"Lacetti","304":"Lanos","305":"Leganza","307":"Matiz","308":"Musso","309":"Nexia","310":"Nubira","312":"Racer","313":"Rezzo","314":"Super","315":"Tacuma","316":"Tico","1675":"Damas","1833":"FSO","1906":"Tacuma"},"21":{"317":"Applause","318":"Charade","320":"Copen","321":"Cuore","322":"Feroza/Sportrak","323":"Freeclimber","324":"Gran Move","325":"Hijet","326":"MATERIA","327":"Move","328":"Rocky/Fourtrak","329":"Sharade","330":"Sirion","331":"Terios","332":"TREVIS","333":"YRV"},"22":{"334":"Bluebird"},"23":{"337":"Avenger","338":"Caliber","339":"Charger","340":"Dakota","342":"Durango","343":"Grand Caravan","345":"Journey","346":"Magnum","348":"Nitro","349":"RAM","350":"Stealth","1804":"Shadow","1842":"Challenger","1956":"Intrepid"},"24":{"353":"246","369":"599 GTB","378":"F430","1734":"458","2097":"488"},"25":{"384":"125","385":"126","388":"131","389":"500","390":"600","392":"750","393":"1100","395":"1500","397":"Albea","398":"Argenta","399":"Barchetta","400":"Brava","401":"Bravo","402":"Cinquecento","403":"Coupe","404":"Croma","406":"Doblo","407":"Ducato","408":"Fiorino","409":"Grande Punto","410":"Idea","411":"Linea","412":"Marea","413":"Marengo","414":"Multipla","415":"Palio","416":"Panda","417":"Punto","418":"Regata","419":"Ritmo","420":"Scudo","421":"Sedici","422":"Seicento","424":"Stilo","425":"Strada","426":"Tempra","427":"Tipo","428":"Ulysse","429":"Uno","1887":"Qubo","1888":"Freemont","1923":"500L","1987":"Campagnola","2035":"500X"},"26":{"432":"Bronco","434":"Cougar","435":"Courier","437":"Econoline","438":"Econovan","439":"Edge","440":"Escape","441":"Escort","442":"Excursion","443":"Expedition","444":"Explorer","446":"F 150","447":"F 250","448":"F 350","451":"Fiesta","452":"Focus","453":"Focus C-Max","454":"Fusion","455":"Galaxy","456":"Granada","458":"Ka","459":"Kuga","460":"Maverick","461":"Mercury","462":"Mondeo","463":"Mustang","464":"Orion","465":"Probe","466":"Puma","467":"Ranger","468":"S-Max","469":"Scorpio","470":"Sierra","471":"Streetka","472":"Taunus","473":"Taurus","474":"Thunderbird","475":"Tourneo","476":"Transit","1584":"Connect","1682":"Duster","1721":"C-Max","1889":"B-Max","2087":"EcoSport","2135":"Flex"},"27":{"478":"69","479":"469","1592":"2310","1705":"13 ЧАЙКА","1825":"ГАЗЕЛА","1826":"Собол"},"29":{"484":"Envoy","485":"Safari","487":"Sierra","2020":"Suburban","2118":"Canyon","2119":"Terrain","2120":"Acadia"},"30":{"493":"Hover Cuv","494":"Safe","1167":"Partner","1792":"Voleex C10","1793":"Hover H5","1794":"Steed 5","1938":"Hover H6","1983":"C30","2009":"C20 R","2179":"Steed 6","2212":"H6"},"31":{"495":"Accord","496":"Aerodeck","497":"Civic","498":"Concerto","499":"CR-V","500":"CRX","501":"Element","502":"FR-V","503":"HR-V","504":"Insight","505":"Integra","506":"Jazz","507":"Legend","508":"Logo","510":"Odyssey","511":"Prelude","512":"S2000","513":"Shuttle","514":"Stream","1738":"Ridgeline","1765":"CR-Z","1928":"Pilot"},"32":{"515":"H1","516":"H2","517":"H3"},"33":{"515":"H1","518":"Accent","519":"Atos","520":"Coupe","521":"Elantra","523":"Galloper","524":"Getz","525":"Grandeur","526":"H 100","527":"H 200","528":"H-1","529":"H-1 Starex","530":"i10","531":"i20","532":"i30","533":"i40","535":"ix55","536":"Lantra","537":"Matrix","538":"Pony","539":"S-Coupe","540":"Santa Fe","541":"Santamo","542":"Sonata","543":"Terracan","544":"Trajet","545":"Tucson","546":"XG 30","1526":"i30 CW","1731":"ix35","1815":"ix20","1816":"Genesis","1827":"Veloster","1926":"Sonica","2172":"Kona","2198":"H 350"},"34":{"549":"FX","550":"G35","552":"QX56","1554":"EX","1555":"G37","1766":"M","1957":"Q50","1992":"QX70","2037":"Q70","2056":"QX50","2058":"QX80","2066":"Q30","2126":"Q60","2176":"QX30","2193":"QX60"},"35":{"553":"Campo","554":"D-Max","556":"Midi","557":"PICK UP","558":"Rodeo","559":"Trooper","2070":"V Cross","2110":"Q-BUS 31"},"36":{"560":"Daimler","561":"E Type","563":"S Type","564":"X Type","565":"XF","566":"XJ","567":"XJ12","568":"XJ40","569":"XJ6","570":"XJ8","571":"XJR","572":"XJS","574":"XK","575":"XKR","1929":"F Type","2049":"XE","2068":"F-Pace"},"37":{"576":"Cherokee","577":"CJ","579":"Commander","580":"Compass","581":"Grand Cherokee","582":"Patriot","583":"Renegade","586":"Wrangler","1838":"Liberty"},"38":{"587":"Besta","589":"Carens","590":"Carnival","591":"Ceed","592":"Cerato","593":"Clarus","595":"Joice","596":"K2500","597":"K2700","599":"Magentis","602":"Opirus","603":"Picanto","604":"Pregio","605":"Pride","606":"ro_ceed","607":"Retona","608":"Rio","611":"Sephia","612":"Shuma","613":"Sorento","614":"Soul","615":"Sportage","1543":"Mohave","1544":"K2900","1712":"Venga","1788":"Sedona","1795":"Avella Delta","1820":"Optima","2169":"Stinger","2187":"Stonic"},"40":{"617":"1200","618":"1300","619":"1500","620":"1600","621":"2101","622":"2102","623":"2103","624":"2104","625":"2105","626":"2106","627":"2107","628":"2108","630":"2110","631":"21011","632":"21012","633":"21013","637":"21053","638":"21061","640":"21074","644":"21213","645":"Kalina","647":"Niva","648":"Oka","649":"Priora","650":"Samara"},"41":{"651":"Countach","654":"Gallardo","1911":"Aventador","2057":"Huracan","2159":"Urus"},"42":{"662":"Dedra","663":"Delta","665":"Fulvia","667":"Kappa","668":"Lybra","669":"MUSA","670":"Phedra","673":"Thema","674":"Thesis","675":"Ypsilon","676":"Zeta","1747":"Y"},"43":{"677":"Defender","678":"Discovery","679":"Freelander","680":"Range Rover","681":"Range Rover Sport","682":"Land Rover I","683":"Land Rover II","684":"Land Rover III","1677":"Discovery 3","1773":"Range Rover Evoque","1995":"Range Rover Vogue","2140":"Velar","2203":"Discovery Sport"},"45":{"686":"ES350","687":"GS300","688":"GS430","689":"GS450","691":"GX470","692":"IS200","693":"IS220","694":"IS250","695":"IS300","697":"LS400","698":"LS430","699":"LS460","700":"LS600","701":"LX470","702":"LX570","703":"RX300","705":"RX350","708":"SC430","1571":"RX450","1729":"RX400h","1768":"CT 200h","2011":"NX200","2012":"NX300","2046":"LX450","2071":"RC","2165":" LC500h","2204":"LS500"},"47":{"714":"Continental","716":"Mark","717":"Navigator","718":"Town Car"},"49":{"731":"Bolero","1572":"GOA","2201":"XUV","2202":"KUV"},"50":{"747":"Ghibli","749":"Granturismo","754":"Quattroporte","1551":"Granturismo S"},"52":{"759":"57"},"53":{"761":"121","762":"2","763":"3","764":"323","765":"5","766":"6","767":"626","769":"B series","771":"BT-50","772":"CX 7","773":"CX 9","774":"Demio","775":"E series","777":"MPV","778":"MX-3","779":"MX-5","780":"MX-6","781":"Premacy","785":"RX-8","786":"Tribute","787":"Xedos","1774":"5 NEW","1775":"6 NEW","1852":"CX 5","2105":"CX 3"},"54":{"788":"190","789":"200","790":"220","791":"230","792":"240","793":"250","794":"260","795":"270","796":"280","797":"290","798":"300","799":"320","800":"350","801":"380","802":"400","803":"416","804":"420","805":"450","806":"500","807":"560","809":"A 140","810":"A 150","811":"A 160","812":"A 170","813":"A 180","814":"A 190","815":"A 200","816":"A 210","817":"B 150","818":"B 170","819":"B 180","820":"B 200","822":"C 180","823":"C 200","824":"C 220","825":"C 230","826":"C 240","827":"C 250","828":"C 270","829":"C 280","830":"C 30 AMG","831":"C 32 AMG","832":"C 320","833":"C 350","835":"C 43 AMG","836":"C 55 AMG","837":"C 63 AMG","838":"CE 200","839":"CE 220","841":"CL 180","842":"CL 200","843":"CL 220","844":"CL 230","845":"CL 420","846":"CL 500","847":"CL 55 AMG","848":"CL 600","849":"CL 63 AMG","851":"CLC 180","852":"CLC 200","853":"CLC 220","854":"CLC 230","856":"CLK 200","857":"CLK 220","858":"CLK 230","859":"CLK 240","860":"CLK 270","861":"CLK 280","862":"CLK 320","863":"CLK 350","864":"CLK 430","865":"CLK 500","868":"CLS 250","869":"CLS 320","870":"CLS 350","871":"CLS 500","872":"CLS 55 AMG","873":"CLS 63 AMG","874":"E 200","875":"E 220","876":"E 230","877":"E 240","878":"E 250","879":"E 260","880":"E 270","881":"E 280","882":"E 290","883":"E 300","884":"E 320","885":"E 350","887":"E 400","888":"E 420","889":"E 430","890":"E 50","891":"E 500","892":"E 55","894":"E 63 AMG","895":"G 230","897":"G 250","898":"G 270","899":"G 280","900":"G 290","901":"G 300","902":"G 320","903":"G 350","904":"G 400","905":"G 500","906":"G 55 AMG","907":"GL 320","908":"GL 420","909":"GL 450","910":"GL 500","912":"GL 63 AMG","913":"GLK 220","914":"GLK 280","915":"GLK 320","916":"GLK 350","917":"MB 100","918":"ML 230","919":"ML 270","920":"ML 280","921":"ML 320","922":"ML 350","923":"ML 400","924":"ML 420","925":"ML 430","926":"ML 500","927":"ML 55 AMG","928":"ML 63 AMG","929":"R 280","930":"R 320","931":"R 350","932":"R 500","934":"S 260","935":"S 280","936":"S 300","937":"S 320","938":"S 350","939":"S 400","940":"S 420","941":"S 430","942":"S 450","943":"S 500","944":"S 55","945":"S 550","946":"S 600","947":"S 63 AMG","948":"S 65 AMG","949":"SL 280","950":"SL 300","951":"SL 320","952":"SL 350","953":"SL 380","954":"SL 420","956":"SL 500","957":"SL 55 AMG","958":"SL 560","960":"SL 600","961":"SL 63 AMG","965":"SLK 200","966":"SLK 230","967":"SLK 280","970":"SLK 350","973":"Sprinter","974":"V 200","975":"V 220","976":"V 230","977":"V 280","978":"Vaneo","979":"Vario","980":"Viano","981":"Vito","1556":"124","1558":"GL","1559":"ML","1635":"115","1665":"A","1722":"SLS","1723":"GL 350","1724":"ML 450","1748":"B","1749":"C","1750":"S","1751":"CLS","1752":"R","1753":"G","1754":"GLK","1763":"SLK","1771":"307","1772":"609","1782":"0405","1803":"C 300","1805":"CLS 280","1806":"GLK 200","1807":"GLK 250","1808":"ML 250","1809":"R 300","1810":"S 250","1811":"SLK 250","1812":"SLS 63","1817":"308","1818":"310","1819":"309","1844":"410","1845":"711","1878":"W123","1879":"W124","1893":"207","1910":"312","1915":"210","1920":"212","1931":"313","1932":"412","1934":"814","1937":"CLA","1962":"G 65 AMG","1965":"GLA","1980":"G 63 AMG","1990":"V 250","2005":"A 250 AMG","2006":"A 250","2007":"208","2015":"CLA 220","2016":"Citan","2018":"GLE","2032":"A 220","2036":"CLA 45 AMG","2038":"508","2052":"GLS","2053":"GT","2054":"GLC","2073":"A 45 AMG","2083":"123","2086":"316","2104":"409","2127":"S 560","2137":" X 220","2138":"X 250","2167":"C 400","2182":"ML 300","2188":"CLS 400","2192":"126","2197":"S 650","2200":"314","2213":"GTS","2215":"E 53 AMG","2216":"G 550"},"55":{"983":"MGB","984":"MGF","985":"Midget","988":"TF","989":"ZR","990":"ZS","991":"ZT"},"56":{"994":"Clubman","995":"Cooper","996":"Cooper S","997":"John Cooper Works","998":"ONE","1909":"Countryman"},"57":{"999":"3000 GT","1000":"Canter","1001":"Carisma","1002":"Colt","1006":"Eclipse","1007":"Galant","1009":"Grandis","1010":"L200","1011":"L300","1012":"L400","1013":"Lancer","1015":"Outlander","1016":"Pajero","1017":"Pajero Pinin","1022":"Space Gear","1023":"Space Runner","1024":"Space Star","1025":"Space Wagon","1674":"Raider","1707":"ASX ","1876":"Pajero Sport","1883":"i-MiEV","1979":"Challenger","2099":"Eclipse Cross"},"59":{"1032":"1360","1035":"403","1036":"426","1037":"Иж","1039":"2140","1041":"407","1042":"427","1043":"1500","1046":"408","1049":"21412","1050":"401","1051":"412","1052":"Aleko"},"60":{"1053":"100 NX","1054":"200 SX","1057":"300 ZX","1058":"350 Z","1059":"Almera","1060":"Almera Tino","1061":"Altima","1062":"Armada","1063":"Bluebird","1064":"Cabstar","1065":"Cargo","1066":"Cherry","1067":"Frontier","1068":"Interstar","1069":"King Cab","1070":"Kubistar","1072":"Maxima","1073":"Micra","1074":"Murano","1075":"Navara","1076":"Note","1077":"Pathfinder","1078":"Patrol","1079":"Prairie","1080":"Primastar","1081":"Primera","1082":"Qashqai","1083":"Quest","1084":"Sentra","1085":"Serena","1086":"Silvia","1088":"Sunny","1089":"Terrano","1090":"Tiida","1091":"Titan","1092":"Trade","1093":"Urvan","1094":"Vanette","1095":"X-Trail","1528":"GTR","1585":"Qashqai+2","1676":"PickUP","1718":"Juke","1739":"X-Terra","1770":"Pixo","1781":"370 Z","1875":"NP300","1964":"NV 200","1984":"Leaf","2040":"Rogue","2060":"Pulsar","2189":"Cube"},"61":{"1098":"Cutlass","1102":"Toronado"},"63":{"1104":"Agila","1105":"Antara","1106":"Arena","1107":"Ascona","1108":"Astra","1109":"Calibra","1110":"Campo","1112":"Combo","1114":"Corsa","1116":"Frontera","1117":"GT","1118":"Insignia","1119":"Kadett","1120":"Manta","1121":"Meriva","1122":"Monterey","1123":"Monza","1124":"Movano","1126":"Omega","1128":"Rekord","1129":"Senator","1130":"Signum","1131":"Sintra","1133":"Tigra","1134":"Vectra","1135":"Vivaro","1136":"Zafira","1850":"Zafira Tourer","1890":"Ampera","1903":"Mokka","1916":"Adam","2115":"Crossland X","2139":"Cascada","2158":"Karl","2171":"Grandland X"},"64":{"255":"Berlingo","1137":"1007","1138":"104","1139":"106","1140":"107","1141":"204","1142":"205","1143":"206","1144":"207","1145":"304","1146":"305","1147":"306","1148":"307","1149":"308","1150":"309","1151":"4007","1153":"405","1154":"406","1155":"407","1156":"504","1157":"505","1159":"605","1160":"607","1161":"806","1162":"807","1163":"Bipper","1164":"Boxer","1165":"Expert","1166":"J5","1167":"Partner","1583":"3008","1669":"206 Plus","1683":"5008","1720":"RCZ","1742":"Ranch","1757":"508","1867":"207 SW","1868":"207 CC","1869":"208","1870":"308 SW","1871":"308 CC","1872":"4008","1873":"508 SW","1874":"508 RXH","1899":"307 SW","1902":"301","1959":"206 CC","2048":"2008","2065":"108","2124":"P4","2195":"307 CC","2206":"Traveller"},"65":{"1168":"Porter","1894":"Ape"},"66":{"1169":"Prowler"},"67":{"1172":"Fiero","1173":"Firebird","1175":"Grand-Am","1176":"Grand-Prix","1179":"Solstice","1183":"Trans Am","1184":"Trans Sport"},"68":{"1187":"911","1190":"924","1196":"Boxster","1198":"Cayenne","1199":"Cayman","1527":"997","1547":"Boxter S","1549":"Carrera","1666":"Panamera","1711":"911 Turbo Cabrio","1958":"Macan"},"69":{"1200":"4","1201":"5","1202":"8","1203":"9","1205":"11","1206":"12","1209":"18","1210":"19","1212":"21","1213":"25","1217":"Avantime","1218":"Bakara","1220":"Chamade","1221":"Clio","1222":"Espace","1223":"Express","1224":"Fuego","1225":"Grand Espace","1226":"Grand Modus","1227":"Grand Scenic","1228":"Kangoo","1229":"Koleos","1230":"Laguna","1231":"Mascott","1232":"Master","1233":"Megane","1234":"Modus","1235":"Nevada","1237":"Rapid","1238":"Safrane","1239":"Scenic","1240":"Spider","1241":"Trafic","1242":"Twingo","1243":"Vel Satis","1542":"Symbol","1671":"Fluence","1780":"Latitude","1925":"Captur","2010":"Twizy","2095":"Kadjar","2125":"Talisman","2174":"Zoe"},"70":{"1251":"Silver Shadow","1679":"Silver Wraith","1841":"Ghost","2181":"Cullinan"},"71":{"1254":"100","1255":"111","1256":"114","1258":"200","1260":"214","1261":"216","1262":"218","1263":"220","1264":"25","1265":"400","1266":"414","1267":"416","1269":"420","1270":"45","1271":"600","1272":"618","1273":"620","1274":"623","1275":"75","1277":"820","1278":"825","1281":"Maestro","1282":"Metro","1283":"Montego","1285":"Streetwise","1953":"ZR"},"72":{"1286":"Alhambra","1287":"Altea","1288":"Arosa","1289":"Cordoba","1291":"Ibiza","1292":"Inca","1293":"Leon","1294":"Malaga","1295":"Marbella","1296":"Ronda","1297":"Terra","1298":"Toledo","1299":"Vario","1670":"Exeo","1884":"Mii","2094":"Ateca","2163":"Arona"},"73":{"130":"540","1300":"105","1301":"120","1304":"Fabia","1305":"Favorit","1306":"Felicia","1307":"Forman","1308":"Octavia","1309":"Pick-up","1310":"Rapid","1311":"Roomster","1312":"Superb","1313":"Yeti","1684":"Praktik","1885":"Citigo"},"74":{"1314":"Mc","1315":"ForFour","1316":"ForTwo","1317":"Roadster","1832":"Micro"},"75":{"1318":"Actyon","1320":"Korando","1321":"Kyron","1322":"MUSSO","1323":"REXTON","1324":"Rodius","1560":"Chairman","2111":"TIVOLI"},"76":{"1325":"B9 Tribeca","1326":"Baja","1327":"Forester","1328":"Impreza","1329":"Justy","1330":"Legacy","1331":"Libero","1332":"OUTBACK","1333":"SVX","1334":"Vivio","1335":"XT","1798":"Trezia","1898":"XV","1904":"WRX","1988":"BRZ","2077":"Levorg"},"77":{"1336":"Alto","1337":"Baleno","1339":"Carry","1340":"Grand Vitara","1341":"Ignis","1342":"Jimny","1343":"Liana","1344":"LJ","1345":"SJ Samurai","1346":"Splash","1348":"Swift","1349":"SX4","1350":"Vitara","1351":"Wagon R+","1352":"X-90","1678":"XL7","1688":"Maruti","2013":"Kizashi","2050":"Celerio"},"78":{"1353":"1100","1357":"Horizon","1358":"Simka"},"79":{"1361":"Aria","1363":"Indica","1365":"Safari","1368":"Telcoline","1927":"Indigo","1963":"Xenon"},"80":{"1369":"4-Runner","1370":"Auris","1372":"Avensis","1373":"Aygo","1374":"Camry","1375":"Carina","1376":"Celica","1377":"Corolla","1378":"Corolla Verso","1379":"Cressida","1380":"Crown","1382":"FJ","1383":"Hiace","1384":"Hilux","1385":"IQ","1386":"Land Cruiser","1387":"Lite-Ace","1388":"MR 2","1389":"Paseo","1390":"Picnic","1391":"Previa","1392":"Prius","1393":"RAV 4","1394":"Sequoia","1395":"Sienna","1396":"Starlet","1397":"Supra","1398":"Tacoma","1399":"Tercel","1400":"Tundra","1401":"Yaris","1530":"Highlander","1580":"Verso","1581":"Urban Cruiser","1886":"GT86","1917":"Venza","2031":"Verso-S","2079":"C-HR","2098":"Proace","2107":"Soarer","2113":"Scion","2134":"Avensis Verso"},"81":{"1402":"600","1403":"601"},"84":{"1418":"24","1419":"M 21","1420":"3110","1422":"22"},"85":{"1424":"240","1425":"244","1426":"245","1429":"340","1430":"360","1431":"440","1432":"460","1433":"480","1434":"740","1435":"744","1437":"760","1439":"850","1440":"855","1441":"940","1444":"960","1446":"Amazon","1447":"C30","1448":"C70","1449":"Polar","1450":"S40","1451":"S60","1452":"S70","1453":"S80","1454":"S90","1455":"V40","1456":"V50","1457":"V70","1459":"XC 60","1460":"XC 70","1461":"XC 90","1800":"V60"},"86":{"1462":"181","1463":"Bora","1465":"Caddy","1466":"Corrado","1467":"Eos","1468":"Fox","1469":"Golf","1471":"Jetta","1472":"Karmann Ghia","1473":"LT","1474":"Lupo","1475":"New Beetle","1476":"Passat","1477":"Phaeton","1478":"Polo","1479":"Santana","1480":"Scirocco","1481":"Sharan","1482":"T1","1483":"T2","1484":"T3","1485":"T3 Caravelle","1486":"T3 Multivan","1487":"T4","1488":"T4 Caravelle","1489":"T4 Multivan","1490":"T5","1491":"T5 Caravelle","1492":"T5 Multivan","1495":"Tiguan","1496":"Touareg","1497":"Touran","1498":"Vento","1541":"Caravelle","1548":"Beetle","1568":"Transporter","1579":"Crafter","1647":"Passat Variant","1648":"Passat CC","1649":"Caddy Life","1650":"Caddy Maxi Life","1651":"Multivan","1652":"Caddy Kasten","1653":"Caddy Maxi Kasten","1654":"Caddy Kombi","1655":"Transporter Kombi","1656":"Crafter Kasten","1657":"Krafter EKA","1658":"Krafter DOKA","1681":"Golf Plus","1689":"Caddy Maxi Kombi","1725":"Amarok DoubleCab","1736":"Golf Variant","1797":"Amarok","1843":"up!","1880":"CC","2114":"Arteon","2170":"T-Roc","2217":"Golf Sportsvan","2218":"Passat Alltrack"},"87":{"1500":"353","1501":"1.3"},"89":{"1508":"452","1509":"460","1510":"469","1512":"69","1762":"Patriot"},"90":{"1518":"Yugo 45","1519":"Gt 55"},"91":{"1521":"968","1523":"965","1525":"966","1695":"Tavria"},"92":{"1531":"9-3","1533":"9-5","1534":"9-7X","1535":"90","1536":"900","1537":"9000","1733":"9-3x"},"95":{"1564":"tC"},"97":{"1559":"ML","1598":"2.5","1599":"2.8","1602":"30-8","1603":"35","1604":"35-8","1605":"3510","1606":"3512","1607":"35c11","1608":"35c13","1609":"35s11","1610":"35s13","1611":"4010","1612":"4012","1613":"4510","1614":"4910","1615":"4912","1616":"50-9","1619":"50s13","1620":"59-12","1622":"60-12","1624":"6512","1630":"Classic","1631":"Daily","1632":"Turbo","1633":"Uni","1851":"Massif","1933":"29L10","1935":"35c15"},"99":{"1715":"Ceo"},"102":{"1728":"223"},"105":[],"106":{"1776":"Range Rover","1777":"Evoque","1778":"Sport","1854":"Freelander 2","1855":"Discovery 4"},"107":{"1779":"21213"},"123":{"1949":"1","1952":"5"},"126":{"1991":"MP4-12C","2130":"570S","2222":"650S"},"127":{"2023":"AOOSED"},"128":[],"129":{"2043":"Model S","2044":"Model X"},"134":{"2109":"MA"},"137":{"2211":"H2","2212":"H6"}}
+
+/***/ }),
+/* 207 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(208)
+}
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(210)
+/* template */
+var __vue_template__ = __webpack_require__(211)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = injectStyle
+/* scopeId */
+var __vue_scopeId__ = "data-v-3d41be16"
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/CarsBGBuses.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-3d41be16", Component.options)
+  } else {
+    hotAPI.reload("data-v-3d41be16", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 208 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(209);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(2)("0ddfbf1e", content, false, {});
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-3d41be16\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./CarsBGBuses.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-3d41be16\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./CarsBGBuses.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 209 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)(false);
+// imports
+
+
+// module
+exports.push([module.i, "\n#filters[data-v-3d41be16] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: flex-start;\n}\n#filters .filter[data-v-3d41be16] {\n    border-radius: 10px;\n    border: 1px solid black;\n    max-width: 300px;\n    padding: 10px;\n    margin: 10px;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 210 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBuses_vue__ = __webpack_require__(217);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBuses_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBuses_vue__);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "CarsBGBusesView",
+    components: {
+        mobileBGFilter: __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBuses_vue___default.a
+    },
+    data: function data() {
+        return {
+            filters: [],
+            filtersStatus: 1,
+            brandModels: {
+                getModels: function getModels(brand) {
+                    var _this = this;
+
+                    if (!this.models[brand]) {
+                        this.$http.get('/carsbg/models?brandId=' + this.storage['brandId']).then(function (resp) {
+                            _this.models = resp.data.models;
+                        });
+                    }
+                }
+            }
+        };
+    },
+    computed: {
+        hasListenings: function hasListenings() {
+            if (this.filters.length > 0) {
+                return true;
+            }
+            return false;
+        }
+    },
+    mounted: function mounted() {
+        this.setFilters();
+    },
+    methods: {
+        setFilters: function setFilters() {
+            var _this2 = this;
+
+            this.$http.get('/filters/CarsBGBuses').then(function (_ref) {
+                var data = _ref.data;
+
+                _this2.filtersStatus = 2;
+                _this2.filters = data;
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 211 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("h2", { staticClass: "text-center" }, [_vm._v("CarsBG Buses")]),
+    _vm._v(" "),
+    _vm.filtersStatus === 2 && _vm.filters.length > 0
+      ? _c(
+          "div",
+          { attrs: { id: "filters" } },
+          _vm._l(_vm.filters, function(filter, index) {
+            return _c("mobileBGFilter", {
+              key: index,
+              staticClass: "filter",
+              attrs: {
+                id: filter.id,
+                data: filter,
+                brandModels: _vm.brandModels
+              },
+              on: { resetListenings: _vm.setFilters }
+            })
+          }),
+          1
+        )
+      : _vm.filtersStatus === 2 && _vm.filters.length === 0
+      ? _c("div", [_vm._v("\n        No filters found.\n    ")])
+      : _c("div", [_vm._v("\n        Loading . . .\n    ")])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-3d41be16", module.exports)
+  }
+}
+
+/***/ }),
+/* 212 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(213)
+}
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(215)
+/* template */
+var __vue_template__ = __webpack_require__(216)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = injectStyle
+/* scopeId */
+var __vue_scopeId__ = "data-v-90fc6ccc"
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/CarsBGBikes.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-90fc6ccc", Component.options)
+  } else {
+    hotAPI.reload("data-v-90fc6ccc", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 213 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(214);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(2)("422b669b", content, false, {});
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-90fc6ccc\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./CarsBGBikes.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-90fc6ccc\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./CarsBGBikes.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 214 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)(false);
+// imports
+
+
+// module
+exports.push([module.i, "\n#filters[data-v-90fc6ccc] {\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-orient: horizontal;\n  -webkit-box-direction: normal;\n      -ms-flex-direction: row;\n          flex-direction: row;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -webkit-box-pack: start;\n      -ms-flex-pack: start;\n          justify-content: flex-start;\n}\n#filters .filter[data-v-90fc6ccc] {\n    border-radius: 10px;\n    border: 1px solid black;\n    max-width: 300px;\n    padding: 10px;\n    margin: 10px;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
+/* 215 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBikes_vue__ = __webpack_require__(221);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBikes_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBikes_vue__);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "CarsBGBikesView",
+    components: {
+        mobileBGFilter: __WEBPACK_IMPORTED_MODULE_0__CarsBG_CarFilterBikes_vue___default.a
+    },
+    data: function data() {
+        return {
+            filters: [],
+            filtersStatus: 1,
+            brandModels: {
+                getModels: function getModels(brand) {
+                    var _this = this;
+
+                    if (!this.models[brand]) {
+                        this.$http.get('/carsbg/models?brandId=' + this.storage['brandId']).then(function (resp) {
+                            _this.models = resp.data.models;
+                        });
+                    }
+                }
+            }
+        };
+    },
+    computed: {
+        hasListenings: function hasListenings() {
+            if (this.filters.length > 0) {
+                return true;
+            }
+            return false;
+        }
+    },
+    mounted: function mounted() {
+        this.setFilters();
+    },
+    methods: {
+        setFilters: function setFilters() {
+            var _this2 = this;
+
+            this.$http.get('/filters/CarsBGBikes').then(function (_ref) {
+                var data = _ref.data;
+
+                _this2.filtersStatus = 2;
+                _this2.filters = data;
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 216 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("h2", { staticClass: "text-center" }, [_vm._v("CarsBG Bikes")]),
+    _vm._v(" "),
+    _vm.filtersStatus === 2 && _vm.filters.length > 0
+      ? _c(
+          "div",
+          { attrs: { id: "filters" } },
+          _vm._l(_vm.filters, function(filter, index) {
+            return _c("mobileBGFilter", {
+              key: index,
+              staticClass: "filter",
+              attrs: {
+                id: filter.id,
+                data: filter,
+                brandModels: _vm.brandModels
+              },
+              on: { resetListenings: _vm.setFilters }
+            })
+          }),
+          1
+        )
+      : _vm.filtersStatus === 2 && _vm.filters.length === 0
+      ? _c("div", [_vm._v("\n        No filters found.\n    ")])
+      : _c("div", [_vm._v("\n        Loading . . .\n    ")])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-90fc6ccc", module.exports)
+  }
+}
+
+/***/ }),
+/* 217 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(218)
+/* template */
+var __vue_template__ = __webpack_require__(220)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/CarsBG/CarFilterBuses.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-3652dc8e", Component.options)
+  } else {
+    hotAPI.reload("data-v-3652dc8e", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 218 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBGBuses_json__ = __webpack_require__(219);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBGBuses_json___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBGBuses_json__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__searches_data_CarsBgBuses_js__ = __webpack_require__(153);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+
+var brands = __WEBPACK_IMPORTED_MODULE_1__searches_data_CarsBgBuses_js__["a" /* default */].inputs.brands;
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "CarsBGBusesFilter",
+    props: {
+        id: {
+            type: Number,
+            required: true
+        },
+        data: Object
+    },
+    computed: {
+        brand: function brand() {
+            return brands[this.data.search_params.brandId];
+        },
+        models: function models() {
+            var _this = this;
+
+            var modelNames = [];
+            this.data.search_params.models.forEach(function (id) {
+                modelNames.push(__WEBPACK_IMPORTED_MODULE_0__storage_app_carsBGConfigs_CarsBGBuses_json___default.a[_this.data.search_params.brandId][id]);
+            });
+
+            return modelNames.join(' / ');
+        },
+        searchParams: function searchParams() {
+            var data = {};
+            if (this.data.search_params !== undefined) {
+                if (this.data.search_params['f5'] !== '') {
+                    data.brand = this.data.search_params['f5'];
+                    data.model = this.data.search_params['f6'];
+                }
+                if (this.data.search_params['f7'] !== '' || this.data.search_params['f8'] !== '') {
+                    data.startPrice = this.data.search_params['f7'];
+                    data.endPrice = this.data.search_params['f8'];
+                    data.currency = this.data.search_params['f9'];
+                }
+                if (this.data.search_params['f10'] !== '' || this.data.search_params['f11'] !== '') {
+                    data.startYear = this.data.search_params['f10'];
+                    data.endYear = this.data.search_params['f11'];
+                }
+            }
+
+            return data;
+        }
+    },
+    methods: {
+        remove: function remove() {
+            var _this2 = this;
+
+            this.$http.post('/filters/delete', {
+                filterId: this.id
+            }).then(function (res) {
+                if (res.data.success) {
+                    _this2.$emit('resetListenings');
+                }
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 219 */
+/***/ (function(module, exports) {
+
+module.exports = {"0":[],"14":{"178":"BLS","179":"CTS","180":"Deville","181":"Eldorado","182":"Escalade","183":"Fleetwood","184":"Seville","185":"SRX","186":"STS","1726":"BLC"},"15":{"189":"Alero","190":"Astro","191":"Avalanche","192":"Aveo","193":"Beretta","194":"Blazer","196":"Camaro","198":"Captiva","205":"Cruze","206":"Epica","207":"Equinox","208":"Evanda","209":"G","210":"HHR","211":"Impala","214":"Kalos","215":"Lacetti","217":"Malibu","218":"Matiz","219":"Niva","221":"Nubira","222":"Rezzo","223":"S-10","224":"Silverado","225":"Spark","227":"Suburban","228":"Tacuma","229":"Tahoe","230":"Trailblazer","231":"Trans Sport","232":"Venture","1578":"Corvette","1764":"Orlando","1830":"Volt","1891":"Cobalt","1939":"Trax"},"16":{"233":"300 M","234":"300C","235":"Crossfire","236":"Daytona","238":"Grand Voyager","241":"Le Baron","242":"Neon","243":"New Yorker","244":"Pacifica","245":"PT Cruiser","246":"Saratoga","247":"Sebring","248":"Stratus","251":"Vision","252":"Voyager"},"17":{"253":"2 CV","254":"AX","255":"Berlingo","256":"BX","257":"C-Crosser","258":"C1","259":"C2","260":"C3","261":"C4","262":"C4 Picasso","263":"C5","264":"C6","265":"C8","266":"CX","267":"DS","268":"Evasion","269":"Grand C4 Picasso","271":"Jumpy","272":"SAXO","275":"Xantia","276":"XM","277":"Xsara","278":"Xsara Picasso","279":"ZX","1545":"Jumper","1546":"Nemo","1577":"C3 Picasso","1672":"C5 NEW","1673":"Jumper II","1680":"C15","1691":"DS3","1743":"Jumpy II","1769":"C4 NEW","1790":"DS4","1837":"BerlingoFT","1900":"DS5","1905":"C-Elysee","1918":"C-Zero","1941":"C4 Aircross","1961":"Jumper III","1982":"C4 Cactus","2223":"C3 Aircross"},"20":{"299":"Espero","300":"Evanda","301":"Kalos","302":"Korando","303":"Lacetti","304":"Lanos","305":"Leganza","307":"Matiz","308":"Musso","309":"Nexia","310":"Nubira","312":"Racer","313":"Rezzo","314":"Super","315":"Tacuma","316":"Tico","1675":"Damas","1833":"FSO","1906":"Tacuma"},"21":{"317":"Applause","318":"Charade","320":"Copen","321":"Cuore","322":"Feroza/Sportrak","323":"Freeclimber","324":"Gran Move","325":"Hijet","326":"MATERIA","327":"Move","328":"Rocky/Fourtrak","329":"Sharade","330":"Sirion","331":"Terios","332":"TREVIS","333":"YRV"},"25":{"384":"125","385":"126","388":"131","389":"500","390":"600","392":"750","393":"1100","395":"1500","397":"Albea","398":"Argenta","399":"Barchetta","400":"Brava","401":"Bravo","402":"Cinquecento","403":"Coupe","404":"Croma","406":"Doblo","407":"Ducato","408":"Fiorino","409":"Grande Punto","410":"Idea","411":"Linea","412":"Marea","413":"Marengo","414":"Multipla","415":"Palio","416":"Panda","417":"Punto","418":"Regata","419":"Ritmo","420":"Scudo","421":"Sedici","422":"Seicento","424":"Stilo","425":"Strada","426":"Tempra","427":"Tipo","428":"Ulysse","429":"Uno","1887":"Qubo","1888":"Freemont","1923":"500L","1987":"Campagnola","2035":"500X"},"26":{"432":"Bronco","434":"Cougar","435":"Courier","437":"Econoline","438":"Econovan","439":"Edge","440":"Escape","441":"Escort","442":"Excursion","443":"Expedition","444":"Explorer","446":"F 150","447":"F 250","448":"F 350","451":"Fiesta","452":"Focus","453":"Focus C-Max","454":"Fusion","455":"Galaxy","456":"Granada","458":"Ka","459":"Kuga","460":"Maverick","461":"Mercury","462":"Mondeo","463":"Mustang","464":"Orion","465":"Probe","466":"Puma","467":"Ranger","468":"S-Max","469":"Scorpio","470":"Sierra","471":"Streetka","472":"Taunus","473":"Taurus","474":"Thunderbird","475":"Tourneo","476":"Transit","1584":"Connect","1682":"Duster","1721":"C-Max","1889":"B-Max","2087":"EcoSport","2135":"Flex"},"27":{"478":"69","479":"469","1592":"2310","1705":"13 ЧАЙКА","1825":"ГАЗЕЛА","1826":"Собол"},"29":{"484":"Envoy","485":"Safari","487":"Sierra","2020":"Suburban","2118":"Canyon","2119":"Terrain","2120":"Acadia"},"33":{"515":"H1","518":"Accent","519":"Atos","520":"Coupe","521":"Elantra","523":"Galloper","524":"Getz","525":"Grandeur","526":"H 100","527":"H 200","528":"H-1","529":"H-1 Starex","530":"i10","531":"i20","532":"i30","533":"i40","535":"ix55","536":"Lantra","537":"Matrix","538":"Pony","539":"S-Coupe","540":"Santa Fe","541":"Santamo","542":"Sonata","543":"Terracan","544":"Trajet","545":"Tucson","546":"XG 30","1526":"i30 CW","1731":"ix35","1815":"ix20","1816":"Genesis","1827":"Veloster","1926":"Sonica","2172":"Kona","2198":"H 350"},"35":{"553":"Campo","554":"D-Max","556":"Midi","557":"PICK UP","558":"Rodeo","559":"Trooper","2070":"V Cross","2110":"Q-BUS 31"},"38":{"587":"Besta","589":"Carens","590":"Carnival","591":"Ceed","592":"Cerato","593":"Clarus","595":"Joice","596":"K2500","597":"K2700","599":"Magentis","602":"Opirus","603":"Picanto","604":"Pregio","605":"Pride","606":"ro_ceed","607":"Retona","608":"Rio","611":"Sephia","612":"Shuma","613":"Sorento","614":"Soul","615":"Sportage","1543":"Mohave","1544":"K2900","1712":"Venga","1788":"Sedona","1795":"Avella Delta","1820":"Optima","2169":"Stinger","2187":"Stonic"},"42":{"662":"Dedra","663":"Delta","665":"Fulvia","667":"Kappa","668":"Lybra","669":"MUSA","670":"Phedra","673":"Thema","674":"Thesis","675":"Ypsilon","676":"Zeta","1747":"Y"},"53":{"761":"121","762":"2","763":"3","764":"323","765":"5","766":"6","767":"626","769":"B series","771":"BT-50","772":"CX 7","773":"CX 9","774":"Demio","775":"E series","777":"MPV","778":"MX-3","779":"MX-5","780":"MX-6","781":"Premacy","785":"RX-8","786":"Tribute","787":"Xedos","1774":"5 NEW","1775":"6 NEW","1852":"CX 5","2105":"CX 3"},"54":{"788":"190","789":"200","790":"220","791":"230","792":"240","793":"250","794":"260","795":"270","796":"280","797":"290","798":"300","799":"320","800":"350","801":"380","802":"400","803":"416","804":"420","805":"450","806":"500","807":"560","809":"A 140","810":"A 150","811":"A 160","812":"A 170","813":"A 180","814":"A 190","815":"A 200","816":"A 210","817":"B 150","818":"B 170","819":"B 180","820":"B 200","822":"C 180","823":"C 200","824":"C 220","825":"C 230","826":"C 240","827":"C 250","828":"C 270","829":"C 280","830":"C 30 AMG","831":"C 32 AMG","832":"C 320","833":"C 350","835":"C 43 AMG","836":"C 55 AMG","837":"C 63 AMG","838":"CE 200","839":"CE 220","841":"CL 180","842":"CL 200","843":"CL 220","844":"CL 230","845":"CL 420","846":"CL 500","847":"CL 55 AMG","848":"CL 600","849":"CL 63 AMG","851":"CLC 180","852":"CLC 200","853":"CLC 220","854":"CLC 230","856":"CLK 200","857":"CLK 220","858":"CLK 230","859":"CLK 240","860":"CLK 270","861":"CLK 280","862":"CLK 320","863":"CLK 350","864":"CLK 430","865":"CLK 500","868":"CLS 250","869":"CLS 320","870":"CLS 350","871":"CLS 500","872":"CLS 55 AMG","873":"CLS 63 AMG","874":"E 200","875":"E 220","876":"E 230","877":"E 240","878":"E 250","879":"E 260","880":"E 270","881":"E 280","882":"E 290","883":"E 300","884":"E 320","885":"E 350","887":"E 400","888":"E 420","889":"E 430","890":"E 50","891":"E 500","892":"E 55","894":"E 63 AMG","895":"G 230","897":"G 250","898":"G 270","899":"G 280","900":"G 290","901":"G 300","902":"G 320","903":"G 350","904":"G 400","905":"G 500","906":"G 55 AMG","907":"GL 320","908":"GL 420","909":"GL 450","910":"GL 500","912":"GL 63 AMG","913":"GLK 220","914":"GLK 280","915":"GLK 320","916":"GLK 350","917":"MB 100","918":"ML 230","919":"ML 270","920":"ML 280","921":"ML 320","922":"ML 350","923":"ML 400","924":"ML 420","925":"ML 430","926":"ML 500","927":"ML 55 AMG","928":"ML 63 AMG","929":"R 280","930":"R 320","931":"R 350","932":"R 500","934":"S 260","935":"S 280","936":"S 300","937":"S 320","938":"S 350","939":"S 400","940":"S 420","941":"S 430","942":"S 450","943":"S 500","944":"S 55","945":"S 550","946":"S 600","947":"S 63 AMG","948":"S 65 AMG","949":"SL 280","950":"SL 300","951":"SL 320","952":"SL 350","953":"SL 380","954":"SL 420","956":"SL 500","957":"SL 55 AMG","958":"SL 560","960":"SL 600","961":"SL 63 AMG","965":"SLK 200","966":"SLK 230","967":"SLK 280","970":"SLK 350","973":"Sprinter","974":"V 200","975":"V 220","976":"V 230","977":"V 280","978":"Vaneo","979":"Vario","980":"Viano","981":"Vito","1556":"124","1558":"GL","1559":"ML","1635":"115","1665":"A","1722":"SLS","1723":"GL 350","1724":"ML 450","1748":"B","1749":"C","1750":"S","1751":"CLS","1752":"R","1753":"G","1754":"GLK","1763":"SLK","1771":"307","1772":"609","1782":"0405","1803":"C 300","1805":"CLS 280","1806":"GLK 200","1807":"GLK 250","1808":"ML 250","1809":"R 300","1810":"S 250","1811":"SLK 250","1812":"SLS 63","1817":"308","1818":"310","1819":"309","1844":"410","1845":"711","1878":"W123","1879":"W124","1893":"207","1910":"312","1915":"210","1920":"212","1931":"313","1932":"412","1934":"814","1937":"CLA","1962":"G 65 AMG","1965":"GLA","1980":"G 63 AMG","1990":"V 250","2005":"A 250 AMG","2006":"A 250","2007":"208","2015":"CLA 220","2016":"Citan","2018":"GLE","2032":"A 220","2036":"CLA 45 AMG","2038":"508","2052":"GLS","2053":"GT","2054":"GLC","2073":"A 45 AMG","2083":"123","2086":"316","2104":"409","2127":"S 560","2137":" X 220","2138":"X 250","2167":"C 400","2182":"ML 300","2188":"CLS 400","2192":"126","2197":"S 650","2200":"314","2213":"GTS","2215":"E 53 AMG","2216":"G 550"},"57":{"999":"3000 GT","1000":"Canter","1001":"Carisma","1002":"Colt","1006":"Eclipse","1007":"Galant","1009":"Grandis","1010":"L200","1011":"L300","1012":"L400","1013":"Lancer","1015":"Outlander","1016":"Pajero","1017":"Pajero Pinin","1022":"Space Gear","1023":"Space Runner","1024":"Space Star","1025":"Space Wagon","1674":"Raider","1707":"ASX ","1876":"Pajero Sport","1883":"i-MiEV","1979":"Challenger","2099":"Eclipse Cross"},"60":{"1053":"100 NX","1054":"200 SX","1057":"300 ZX","1058":"350 Z","1059":"Almera","1060":"Almera Tino","1061":"Altima","1062":"Armada","1063":"Bluebird","1064":"Cabstar","1065":"Cargo","1066":"Cherry","1067":"Frontier","1068":"Interstar","1069":"King Cab","1070":"Kubistar","1072":"Maxima","1073":"Micra","1074":"Murano","1075":"Navara","1076":"Note","1077":"Pathfinder","1078":"Patrol","1079":"Prairie","1080":"Primastar","1081":"Primera","1082":"Qashqai","1083":"Quest","1084":"Sentra","1085":"Serena","1086":"Silvia","1088":"Sunny","1089":"Terrano","1090":"Tiida","1091":"Titan","1092":"Trade","1093":"Urvan","1094":"Vanette","1095":"X-Trail","1528":"GTR","1585":"Qashqai+2","1676":"PickUP","1718":"Juke","1739":"X-Terra","1770":"Pixo","1781":"370 Z","1875":"NP300","1964":"NV 200","1984":"Leaf","2040":"Rogue","2060":"Pulsar","2189":"Cube"},"63":{"1104":"Agila","1105":"Antara","1106":"Arena","1107":"Ascona","1108":"Astra","1109":"Calibra","1110":"Campo","1112":"Combo","1114":"Corsa","1116":"Frontera","1117":"GT","1118":"Insignia","1119":"Kadett","1120":"Manta","1121":"Meriva","1122":"Monterey","1123":"Monza","1124":"Movano","1126":"Omega","1128":"Rekord","1129":"Senator","1130":"Signum","1131":"Sintra","1133":"Tigra","1134":"Vectra","1135":"Vivaro","1136":"Zafira","1850":"Zafira Tourer","1890":"Ampera","1903":"Mokka","1916":"Adam","2115":"Crossland X","2139":"Cascada","2158":"Karl","2171":"Grandland X"},"64":{"255":"Berlingo","1137":"1007","1138":"104","1139":"106","1140":"107","1141":"204","1142":"205","1143":"206","1144":"207","1145":"304","1146":"305","1147":"306","1148":"307","1149":"308","1150":"309","1151":"4007","1153":"405","1154":"406","1155":"407","1156":"504","1157":"505","1159":"605","1160":"607","1161":"806","1162":"807","1163":"Bipper","1164":"Boxer","1165":"Expert","1166":"J5","1167":"Partner","1583":"3008","1669":"206 Plus","1683":"5008","1720":"RCZ","1742":"Ranch","1757":"508","1867":"207 SW","1868":"207 CC","1869":"208","1870":"308 SW","1871":"308 CC","1872":"4008","1873":"508 SW","1874":"508 RXH","1899":"307 SW","1902":"301","1959":"206 CC","2048":"2008","2065":"108","2124":"P4","2195":"307 CC","2206":"Traveller"},"65":{"1168":"Porter","1894":"Ape"},"69":{"1200":"4","1201":"5","1202":"8","1203":"9","1205":"11","1206":"12","1209":"18","1210":"19","1212":"21","1213":"25","1217":"Avantime","1218":"Bakara","1220":"Chamade","1221":"Clio","1222":"Espace","1223":"Express","1224":"Fuego","1225":"Grand Espace","1226":"Grand Modus","1227":"Grand Scenic","1228":"Kangoo","1229":"Koleos","1230":"Laguna","1231":"Mascott","1232":"Master","1233":"Megane","1234":"Modus","1235":"Nevada","1237":"Rapid","1238":"Safrane","1239":"Scenic","1240":"Spider","1241":"Trafic","1242":"Twingo","1243":"Vel Satis","1542":"Symbol","1671":"Fluence","1780":"Latitude","1925":"Captur","2010":"Twizy","2095":"Kadjar","2125":"Talisman","2174":"Zoe"},"72":{"1286":"Alhambra","1287":"Altea","1288":"Arosa","1289":"Cordoba","1291":"Ibiza","1292":"Inca","1293":"Leon","1294":"Malaga","1295":"Marbella","1296":"Ronda","1297":"Terra","1298":"Toledo","1299":"Vario","1670":"Exeo","1884":"Mii","2094":"Ateca","2163":"Arona"},"76":{"1325":"B9 Tribeca","1326":"Baja","1327":"Forester","1328":"Impreza","1329":"Justy","1330":"Legacy","1331":"Libero","1332":"OUTBACK","1333":"SVX","1334":"Vivio","1335":"XT","1798":"Trezia","1898":"XV","1904":"WRX","1988":"BRZ","2077":"Levorg"},"77":{"1336":"Alto","1337":"Baleno","1339":"Carry","1340":"Grand Vitara","1341":"Ignis","1342":"Jimny","1343":"Liana","1344":"LJ","1345":"SJ Samurai","1346":"Splash","1348":"Swift","1349":"SX4","1350":"Vitara","1351":"Wagon R+","1352":"X-90","1678":"XL7","1688":"Maruti","2013":"Kizashi","2050":"Celerio"},"80":{"1369":"4-Runner","1370":"Auris","1372":"Avensis","1373":"Aygo","1374":"Camry","1375":"Carina","1376":"Celica","1377":"Corolla","1378":"Corolla Verso","1379":"Cressida","1380":"Crown","1382":"FJ","1383":"Hiace","1384":"Hilux","1385":"IQ","1386":"Land Cruiser","1387":"Lite-Ace","1388":"MR 2","1389":"Paseo","1390":"Picnic","1391":"Previa","1392":"Prius","1393":"RAV 4","1394":"Sequoia","1395":"Sienna","1396":"Starlet","1397":"Supra","1398":"Tacoma","1399":"Tercel","1400":"Tundra","1401":"Yaris","1530":"Highlander","1580":"Verso","1581":"Urban Cruiser","1886":"GT86","1917":"Venza","2031":"Verso-S","2079":"C-HR","2098":"Proace","2107":"Soarer","2113":"Scion","2134":"Avensis Verso"},"85":{"1424":"240","1425":"244","1426":"245","1429":"340","1430":"360","1431":"440","1432":"460","1433":"480","1434":"740","1435":"744","1437":"760","1439":"850","1440":"855","1441":"940","1444":"960","1446":"Amazon","1447":"C30","1448":"C70","1449":"Polar","1450":"S40","1451":"S60","1452":"S70","1453":"S80","1454":"S90","1455":"V40","1456":"V50","1457":"V70","1459":"XC 60","1460":"XC 70","1461":"XC 90","1800":"V60"},"86":{"1462":"181","1463":"Bora","1465":"Caddy","1466":"Corrado","1467":"Eos","1468":"Fox","1469":"Golf","1471":"Jetta","1472":"Karmann Ghia","1473":"LT","1474":"Lupo","1475":"New Beetle","1476":"Passat","1477":"Phaeton","1478":"Polo","1479":"Santana","1480":"Scirocco","1481":"Sharan","1482":"T1","1483":"T2","1484":"T3","1485":"T3 Caravelle","1486":"T3 Multivan","1487":"T4","1488":"T4 Caravelle","1489":"T4 Multivan","1490":"T5","1491":"T5 Caravelle","1492":"T5 Multivan","1495":"Tiguan","1496":"Touareg","1497":"Touran","1498":"Vento","1541":"Caravelle","1548":"Beetle","1568":"Transporter","1579":"Crafter","1647":"Passat Variant","1648":"Passat CC","1649":"Caddy Life","1650":"Caddy Maxi Life","1651":"Multivan","1652":"Caddy Kasten","1653":"Caddy Maxi Kasten","1654":"Caddy Kombi","1655":"Transporter Kombi","1656":"Crafter Kasten","1657":"Krafter EKA","1658":"Krafter DOKA","1681":"Golf Plus","1689":"Caddy Maxi Kombi","1725":"Amarok DoubleCab","1736":"Golf Variant","1797":"Amarok","1843":"up!","1880":"CC","2114":"Arteon","2170":"T-Roc","2217":"Golf Sportsvan","2218":"Passat Alltrack"},"87":{"1500":"353","1501":"1.3"},"89":{"1508":"452","1509":"460","1510":"469","1512":"69","1762":"Patriot"},"93":[],"97":{"1559":"ML","1598":"2.5","1599":"2.8","1602":"30-8","1603":"35","1604":"35-8","1605":"3510","1606":"3512","1607":"35c11","1608":"35c13","1609":"35s11","1610":"35s13","1611":"4010","1612":"4012","1613":"4510","1614":"4910","1615":"4912","1616":"50-9","1619":"50s13","1620":"59-12","1622":"60-12","1624":"6512","1630":"Classic","1631":"Daily","1632":"Turbo","1633":"Uni","1851":"Massif","1933":"29L10","1935":"35c15"},"100":{"1716":"S 215 HD","1717":"315 HD","1976":"S228"},"108":[],"112":[],"118":[],"120":[],"125":[],"131":[],"132":[],"135":[]}
+
+/***/ }),
+/* 220 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", { staticClass: "title" }, [_vm._v(_vm._s(this.data.type))]),
+    _vm._v(" "),
+    _c("div", { staticClass: "description" }, [
+      _c("p", [_vm._v("Brand: " + _vm._s(_vm.brand))]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Models:")]),
+      _vm._v(" "),
+      _c("p", [_vm._v(" " + _vm._s(_vm.models))]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "Price:\n            " +
+            _vm._s(_vm.searchParams.startPrice) +
+            _vm._s(
+              _vm.searchParams.startPrice ? _vm.searchParams.currency : ""
+            ) +
+            " -\n            " +
+            _vm._s(_vm.searchParams.endPrice) +
+            _vm._s(_vm.searchParams.endPrice ? _vm.searchParams.currency : "")
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "Year: " +
+            _vm._s(_vm.searchParams.startYear) +
+            " - " +
+            _vm._s(_vm.searchParams.endYear)
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr"),
+    _vm._v(" "),
+    _c("div", { staticClass: "actions" }, [
+      _c(
+        "div",
+        {
+          on: {
+            click: function($event) {
+              $event.stopPropagation()
+              return _vm.remove($event)
+            }
+          }
+        },
+        [_vm._v("Remove")]
+      )
+    ])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-3652dc8e", module.exports)
+  }
+}
+
+/***/ }),
+/* 221 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(0)
+/* script */
+var __vue_script__ = __webpack_require__(222)
+/* template */
+var __vue_template__ = __webpack_require__(223)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/components/filterViews/CarsBG/CarFilterBikes.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-5f169d3d", Component.options)
+  } else {
+    hotAPI.reload("data-v-5f169d3d", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 222 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__searches_data_CarsBgBikes_js__ = __webpack_require__(138);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+var brands = __WEBPACK_IMPORTED_MODULE_0__searches_data_CarsBgBikes_js__["a" /* default */].inputs.brands;
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    name: "CarsBGBusesFilter",
+    props: {
+        id: {
+            type: Number,
+            required: true
+        },
+        data: Object
+    },
+    computed: {
+        brand: function brand() {
+            return brands[this.data.search_params.brand_motoId];
+        },
+        searchParams: function searchParams() {
+            var data = {};
+            if (this.data.search_params !== undefined) {
+                if (this.data.search_params['f5'] !== '') {
+                    data.brand = this.data.search_params['f5'];
+                    data.model = this.data.search_params['f6'];
+                }
+                if (this.data.search_params['f7'] !== '' || this.data.search_params['f8'] !== '') {
+                    data.startPrice = this.data.search_params['f7'];
+                    data.endPrice = this.data.search_params['f8'];
+                    data.currency = this.data.search_params['f9'];
+                }
+                if (this.data.search_params['f10'] !== '' || this.data.search_params['f11'] !== '') {
+                    data.startYear = this.data.search_params['f10'];
+                    data.endYear = this.data.search_params['f11'];
+                }
+            }
+
+            return data;
+        }
+    },
+    methods: {
+        remove: function remove() {
+            var _this = this;
+
+            this.$http.post('/filters/delete', {
+                filterId: this.id
+            }).then(function (res) {
+                if (res.data.success) {
+                    _this.$emit('resetListenings');
+                }
+            });
+        }
+    }
+});
+
+/***/ }),
+/* 223 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", { staticClass: "title" }, [_vm._v(_vm._s(this.data.type))]),
+    _vm._v(" "),
+    _c("div", { staticClass: "description" }, [
+      _c("p", [_vm._v("Brand: " + _vm._s(_vm.brand))]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Model: " + _vm._s(_vm.data.search_params.model_moto))]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "Price:\n            " +
+            _vm._s(_vm.searchParams.startPrice) +
+            _vm._s(
+              _vm.searchParams.startPrice ? _vm.searchParams.currency : ""
+            ) +
+            " -\n            " +
+            _vm._s(_vm.searchParams.endPrice) +
+            _vm._s(_vm.searchParams.endPrice ? _vm.searchParams.currency : "")
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "Year: " +
+            _vm._s(_vm.searchParams.startYear) +
+            " - " +
+            _vm._s(_vm.searchParams.endYear)
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr"),
+    _vm._v(" "),
+    _c("div", { staticClass: "actions" }, [
+      _c(
+        "div",
+        {
+          on: {
+            click: function($event) {
+              $event.stopPropagation()
+              return _vm.remove($event)
+            }
+          }
+        },
+        [_vm._v("Remove")]
+      )
+    ])
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-5f169d3d", module.exports)
   }
 }
 

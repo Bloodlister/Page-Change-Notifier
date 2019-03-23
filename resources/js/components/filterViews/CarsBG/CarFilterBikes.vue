@@ -3,8 +3,7 @@
         <div class="title">{{ this.data.type }}</div>
         <div class="description">
             <p>Brand: {{ brand }}</p>
-            <p>Models:</p>
-            <p> {{ models }}</p>
+            <p>Model: {{ data.search_params.model_moto }}</p>
             <p>Price:
                 {{ searchParams.startPrice }}{{ searchParams.startPrice ? searchParams.currency : ''}} -
                 {{ searchParams.endPrice }}{{ searchParams.endPrice ? searchParams.currency : ''}}</p>
@@ -18,13 +17,11 @@
 </template>
 
 <script>
-    import brandsAndModels from '../../../../../storage/app/carsBGConfigs/CarsBG.json'
-    import inputData from '../../searches/data/CarsBG.js';
-
+    import inputData from '../../searches/data/CarsBgBikes.js';
     let brands = inputData.inputs.brands;
 
     export default {
-        name: "CarsBGCarsFilter",
+        name: "CarsBGBusesFilter",
         props: {
             id: {
                 type: Number,
@@ -34,15 +31,7 @@
         },
         computed: {
             brand() {
-                return brands[this.data.search_params.brandId];
-            },
-            models() {
-                let modelNames = [];
-                this.data.search_params.models.forEach((id) => {
-                    modelNames.push(brandsAndModels[this.data.search_params.brandId][id]);
-                });
-
-                return modelNames.join(' / ');
+                return brands[this.data.search_params.brand_motoId];
             },
             searchParams() {
                 let data = {};

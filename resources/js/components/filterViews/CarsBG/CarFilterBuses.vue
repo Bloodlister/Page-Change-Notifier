@@ -18,13 +18,13 @@
 </template>
 
 <script>
-    import brandsAndModels from '../../../../../storage/app/carsBGConfigs/CarsBG.json'
-    import inputData from '../../searches/data/CarsBG.js';
+    import brandsAndModels from '../../../../../storage/app/carsBGConfigs/CarsBGBuses.json'
+    import inputData from '../../searches/data/CarsBgBuses.js';
 
     let brands = inputData.inputs.brands;
 
     export default {
-        name: "CarsBGCarsFilter",
+        name: "CarsBGBusesFilter",
         props: {
             id: {
                 type: Number,
