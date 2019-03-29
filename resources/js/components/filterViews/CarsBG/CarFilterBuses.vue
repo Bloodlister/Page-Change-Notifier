@@ -6,9 +6,9 @@
             <p>Models:</p>
             <p> {{ models }}</p>
             <p>Price:
-                {{ searchParams.startPrice }}{{ searchParams.startPrice ? searchParams.currency : ''}} -
-                {{ searchParams.endPrice }}{{ searchParams.endPrice ? searchParams.currency : ''}}</p>
-            <p>Year: {{ searchParams.startYear }} - {{ searchParams.endYear }}</p>
+                {{ searchParams.priceFrom }}{{ searchParams.priceFrom ? searchParams.currency : ''}} -
+                {{ searchParams.priceTo }}{{ searchParams.priceTo ? searchParams.currency : ''}}</p>
+            <p>Year: {{ searchParams.yearFrom }} - {{ searchParams.yearTo }}</p>
         </div>
         <hr>
         <div class="actions">
@@ -47,18 +47,18 @@
             searchParams() {
                 let data = {};
                 if (this.data.search_params !== undefined) {
-                    if (this.data.search_params['f5'] !== '') {
-                        data.brand = this.data.search_params['f5'];
-                        data.model = this.data.search_params['f6'];
+                    if (this.data.search_params['brand'] !== '') {
+                        data.brand = this.data.search_params['brand'];
+                        data.model = this.data.search_params['models'];
                     }
-                    if (this.data.search_params['f7'] !== '' || this.data.search_params['f8'] !== '') {
-                        data.startPrice = this.data.search_params['f7'];
-                        data.endPrice = this.data.search_params['f8'];
-                        data.currency = this.data.search_params['f9'];
+                    if (this.data.search_params['yearFrom'] !== '' || this.data.search_params['yearTo'] !== '') {
+                        data.yearFrom = this.data.search_params['yearFrom'];
+                        data.yearTo = this.data.search_params['yearTo'];
+                        data.currency = this.data.search_params['currency'];
                     }
-                    if (this.data.search_params['f10'] !== '' || this.data.search_params['f11'] !== '') {
-                        data.startYear = this.data.search_params['f10'];
-                        data.endYear = this.data.search_params['f11'];
+                    if (this.data.search_params['priceFrom'] !== '' || this.data.search_params['priceTo'] !== '') {
+                        data.priceFrom = this.data.search_params['priceFrom'];
+                        data.priceTo = this.data.search_params['priceTo'];
                     }
                 }
 
