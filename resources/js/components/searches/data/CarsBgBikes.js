@@ -1,7 +1,9 @@
 export default {
     "defaultStorage": {
         "brand_motoId": null,
-        "model_moto": ''
+        "model_moto": '',
+        "offersFor4": 1,
+        "offersFor1": 1,
     },
     "inputs": {
         "brands": {
