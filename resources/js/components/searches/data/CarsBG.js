@@ -1,8 +1,8 @@
 export default {
     "defaultStorage": {
         "brandId": null,
-        "offersFor4": 1,
-        "offersFor1": 1,
+        "offersForA": 1,
+        "offersForD": 1,
     },
     "inputs": {
         "brands": {
