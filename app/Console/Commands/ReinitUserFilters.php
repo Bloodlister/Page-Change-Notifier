@@ -6,6 +6,7 @@ use App\Filter;
 use App\User;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
+use Spatie\Async\Pool;
 
 class ReinitUserFilters extends Command
 {
@@ -43,13 +44,23 @@ class ReinitUserFilters extends Command
         $userId = $this->argument('user_id');
         /** @var User $user */
         $user = User::find($userId);
-        $user->filters()->each(function (Filter $filter) use ($userId) {
-            $newFilter = new Filter();
-            $newFilter->user_id = $userId;
-            $newFilter->search_params = $filter->search_params;
-            $newFilter->type = $filter->type;
-            $filter->delete();
-            $newFilter->save();
+        $pool = Pool::create();
+        $bar = $this->output->createProgressBar($user->filters()->count());
+        $user->filters()->each(function (Filter $filter) use ($userId, $pool, $bar) {
+            $pool->add(static function () use ($userId, $filter, $bar) {
+                $newFilter = new Filter();
+                $newFilter->user_id = $userId;
+                $newFilter->search_params = $filter->search_params;
+                $newFilter->type = $filter->type;
+                $filter->delete();
+                $newFilter->save();
+                $bar->advance();
+            })->catch(function (\Exception $exception) {
+                var_dump($exception->getMessage());
+            });
         });
+
+        $pool->concurrency(20)->wait();
+        $bar->finish();
     }
 }

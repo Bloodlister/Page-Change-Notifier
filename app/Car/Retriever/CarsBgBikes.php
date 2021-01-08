@@ -11,7 +11,7 @@ class CarsBgBikes extends Retriever {
     public const IDENTIFIER = 'CarsBgBikes';
 
     public static function getModels(int $brandId) {
-        $response = Request::sendGetRequest('https://www.cars.bg/?ajax=multimodel&brandId=' . $brandId);
+        $response = Request::sendGetRequest('https://www.cars.bg/motolist.php?subm=1&add_search=1&typeoffer=3&brandId=' . $brandId);
         $response = trim(explode('<script>', $response)[0]);
         $response = preg_replace('/<div>.*<\/div>/', '', $response);
         $response = preg_replace('/<p.*>[\s\S]*<\/p>/m', '', $response);
@@ -21,7 +21,7 @@ class CarsBgBikes extends Retriever {
     }
 
     public function getCars(Base $collection, int $page = 1) : Collection {
-        $query = 'https://www.cars.bg/?go=moto&search=1&filterOrderBy=1&section=moto&' .
+        $query = 'https://www.cars.bg/motolist.php?subm=1&add_search=1&typeoffer=3&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
         
@@ -43,7 +43,7 @@ class CarsBgBikes extends Retriever {
     }
 
     public function getNewCars(Collection $seenBikes, Base $collection, int $page = 1) : Collection {
-        $query = 'https://www.cars.bg/?go=moto&search=1&filterOrderBy=1&section=moto&' .
+        $query = 'https://www.cars.bg/motolist.php?subm=1&add_search=1&typeoffer=3&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
 

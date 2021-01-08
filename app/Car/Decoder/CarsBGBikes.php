@@ -2,6 +2,7 @@
 
 namespace App\Car\Decoder;
 
+use App\Car;
 use App\Car as Bike;
 use Illuminate\Support\Collection;
 use Symfony\Component\DomCrawler\Crawler;
@@ -27,76 +28,45 @@ class CarsBGBikes extends Decoder {
         return $models;
     }
 
-    protected function getCarsHTMLFromPage(string $pageHTML) : Collection {
+    protected function getCarsHTMLFromPage(string $pageHTML): Collection
+    {
         $crawler = new Crawler($pageHTML);
-        $bikesTables = collect();
+        $carsTables = collect();
 
-        $crawler->filter('.tableListResults')->first()->filter('tr')->each(function(Crawler $row) use ($bikesTables) {
-            $isAd = (bool)$row->filter('#subscriptionPromoContainer')->count();
-            if ($isAd) { return; }
+        $crawler->filter('.pageContainer .mdc-card')->each(function (Crawler $card) use ($carsTables) {
+            $carCrawler = new Crawler($card->html());
 
-            if($row->filter('td')->count() >= 5) {
-                $bikesTables->push($row->html());
+            if ($carCrawler->filter('a')->count()) {
+                $carsTables->push($card->html());
             }
         });
 
-        return $bikesTables;
+        return $carsTables;
     }
 
-    protected function getCarFromHTML(string $html) : Bike {
+    protected function getCarFromHTML(string $html): Car
+    {
         $crawler = new Crawler($html);
-        $bike = new Bike();
+        $car = new Car();
 
-        $index = 1;
-        $crawler->filter('td')->each(function(Crawler $field) use (&$bike, &$index) {
-            $method = 'container_' . $index;
-            if(method_exists($this, $method)) {
-                $this->$method($bike, $field);
-            }
-
-            $index++;
+        $car->link = $crawler->filter('a')->first()->attr('href');
+        $car->title = $crawler->filter('.card__title')->first()->text();
+        $crawler->filter('a')->first()->each(function (Crawler $carCrawler) use ($car) {
+            preg_match('/(https:\/\/.+)"/', $carCrawler->filter('.mdc-card__media')->first()->attr('style'), $style);
+            $car->image = $style[1];
         });
+        $descriptionParts = [];
+        $crawler->filter('div[class*="mdc-typography--body"]')->each(function (Crawler $descriptionPart) use (&$descriptionParts) {
+            $descriptionParts[] = $descriptionPart->text();
+        });
+        $car->desc = implode(' | ', $descriptionParts);
+        $car->price = $crawler->filter('.price')->first()->text();
 
-        return $bike;
+        return $car;
     }
 
-    private function container_1(Bike &$bike, Crawler $crawler) {
-        $bike->image = $this->getImage($crawler);
-        $bike->link = $this->getLink($crawler);
-    }
-
-    private function container_2(Bike &$bike, Crawler $crawler) {
-        $bike->title = $this->getTitle($crawler);
-        $bike->desc = $this->getDesc($crawler);
-    }
-
-    private function container_4(Bike &$bike, Crawler $crawler) {
-        $bike->price = $this->getPrice($crawler);
-    }
-
-    protected function getImage(Crawler $crawler) {
-        return $crawler->filter('img')->first()->attr('src');
-    }
-
-    protected function getLink(Crawler $crawler) {
-        return 'https://cars.bg/' . $crawler->filter('a')->first()->attr('href');
-    }
-
-    protected function getTitle(Crawler $crawler) {
-        return $crawler->filter('a')->first()->text();
-    }
-
-    protected function getDesc(Crawler $crawler) {
-        $description = $crawler->filter('div');
-
-        if ($description->count() > 0) {
-            return trim($crawler->filter('div')->first()->text());
-        } else {
-            return '[ Няма описание. . . ]';
-        }
-    }
-
-    protected function getPrice(Crawler $crawler) {
+    protected function getPrice(Crawler $crawler)
+    {
         return trim(preg_replace('/\s+/', ' ', $crawler->text()));
     }
 

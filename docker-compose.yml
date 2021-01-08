@@ -1,0 +1,22 @@
+version: "3.7"
+
+volumes:
+  mysql:
+
+services:
+  car_notifier:
+    container_name: car-notifier
+    build:
+      context: .
+    volumes:
+      - .:/usr/src/app
+
+  mysql:
+    container_name: car-notifier-mysql
+    image: mysql
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: secret

@@ -24,12 +24,12 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('notifier:MobileBG ' . env('APP_URL'))->cron('*/6 * * * *');
-        $schedule->command('notifier:MobileBGBikes ' . env('APP_URL'))->cron('*/6 * * * *');
+        $schedule->command('notifier:MobileBG ' . env('APP_URL'))->cron('*/12 * * * *');
+        $schedule->command('notifier:MobileBGBikes ' . env('APP_URL'))->cron('*/7 * * * *');
         $schedule->command('notifier:MobileBGBuses ' . env('APP_URL'))->cron('*/6 * * * *');
-        $schedule->command('notifier:CarsBG')->cron('1,16,31,46 * * * *');
-        $schedule->command('notifier:CarsBGBikes')->cron('1,16,31,46 * * * *');
-        $schedule->command('notifier:CarsBGBuses')->cron('1,16,31,46 * * * *');
+        $schedule->command('notifier:CarsBG')->cron('1,15,30,45 * * * *');
+	$schedule->command('notifier:CarsBGBikes')->cron('*/10 * * * *');
+	$schedule->command('notifier:CarsBGBuses')->cron('*/10 * * * *');
         $schedule->command('notifier:clearCars')->cron('*/30 * * * *');
     }
 

@@ -63,6 +63,7 @@ class Filter extends Model
         $collection = CollectionFactory::get($this->type);
         $collection->setSearchParams($searchParams);
         $initialCars = $carRetriever->getCars($collection, 1);
+
         $this->seenCars()->saveMany($initialCars);
     }
 

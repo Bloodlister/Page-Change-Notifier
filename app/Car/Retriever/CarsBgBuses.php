@@ -21,19 +21,20 @@ class CarsBgBuses extends Retriever {
     }
 
     public function getCars(Base $collection, int $page = 1) : Collection {
-        $query = 'https://www.cars.bg/?go=busove&search=1&filterOrderBy=1&section=busove&' .
+        $query = 'https://www.cars.bg/buseslist.php?subm=1&add_search=1&typeoffer=1&section=cars&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
+
         $response = Request::sendGetRequest($query);
         $decoder = \App\Car\Decoder\Factory::get(\App\Car\Decoder\CarsBG::IDENTIFIER);
 
-        $buses = $decoder->getCars($response);
+        $cars = $decoder->getCars($response);
 
-        if ($buses->count() > 0) {
-            $collection->addCars($buses);
+        if ($cars->count() > 0) {
+            $collection->addCars($cars);
         }
 
-        if ($buses->count() == 0 || $collection->initialLimitReached()) {
+        if ($cars->count() == 0 || $collection->initialLimitReached()) {
             return $collection->getCars();
         } else {
             $page += 1;
@@ -41,25 +42,25 @@ class CarsBgBuses extends Retriever {
         }
     }
 
-    public function getNewCars(Collection $seenBuses, Base $collection, int $page = 1) : Collection {
-        $query = 'https://www.cars.bg/?go=busove&search=1&filterOrderBy=1&section=busove&' .
+    public function getNewCars(Collection $seenCars, Base $collection, int $page = 1) : Collection {
+        $query = 'https://www.cars.bg/buseslist.php?subm=1&add_search=1&typeoffer=1&section=cars&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
 
         $response = Request::sendGetRequest($query);
         $decoder = \App\Car\Decoder\Factory::get(\App\Car\Decoder\CarsBG::IDENTIFIER);
 
-        $buses = $decoder->getCars($response);
+        $cars = $decoder->getCars($response);
 
-        if ($buses->count() > 0) {
-            $collection->addNewCars($seenBuses, $buses);
+        if ($cars->count() > 0) {
+            $collection->addNewCars($seenCars, $cars);
         }
 
-        if ($buses->count() == 0 || $collection->seenPreviousCars()) {
+        if ($cars->count() == 0 || $collection->seenPreviousCars()) {
             return $collection->getCars();
         } else {
             $page += 1;
-            return $this->getNewCars($seenBuses, $collection, $page);
+            return $this->getNewCars($seenCars, $collection, $page);
         }
     }
 }

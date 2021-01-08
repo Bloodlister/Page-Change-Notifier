@@ -22,7 +22,7 @@ class CarsBg extends Retriever {
     }
 
     public function getCars(Base $collection, int $page = 1) : Collection {
-        $query = 'https://www.cars.bg/?go=cars&search=1&filterOrderBy=1&section=cars&' .
+        $query = 'https://www.cars.bg/carslist.php?subm=1&add_search=1&typeoffer=1&section=cars&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
 
@@ -44,7 +44,7 @@ class CarsBg extends Retriever {
     }
 
     public function getNewCars(Collection $seenCars, Base $collection, int $page = 1) : Collection {
-        $query = 'https://www.cars.bg/?go=cars&search=1&filterOrderBy=1&section=cars&' .
+        $query = 'https://www.cars.bg/carslist.php?subm=1&add_search=1&typeoffer=1&section=cars&' .
             'page=' . $page . '&' .
             http_build_query($collection->getSearchParams());
 
