@@ -9,6 +9,7 @@ use App\Car\Validator\MobileBG;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class Filter
@@ -62,9 +63,12 @@ class Filter extends Model
 
         $collection = CollectionFactory::get($this->type);
         $collection->setSearchParams($searchParams);
-        $initialCars = $carRetriever->getCars($collection, 1);
-
-        $this->seenCars()->saveMany($initialCars);
+        try {
+            $initialCars = $carRetriever->getCars($collection, 1);
+            $this->seenCars()->saveMany($initialCars);
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+        }
     }
 
     /**

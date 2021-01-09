@@ -12,11 +12,7 @@ class MobileBG extends Retriever {
     const IDENTIFIER = 'MobileBG';
 
     public function getCars(Base $collection, int $page = 1) : Collection {
-        try {
-            $cars = $this->getCarsFromSearch($collection, $page);
-        } catch (\Exception $exception) {
-            var_dump($collection); exit();
-        }
+        $cars = $this->getCarsFromSearch($collection, $page);
 
         if ($cars->count() > 0) {
             $collection->addCars($cars);

@@ -50,7 +50,7 @@ class CarsBGBuses extends Decoder {
         $car = new Car();
 
         $car->link = $crawler->filter('a')->first()->attr('href');
-        $car->title = $crawler->filter('.card__title')->first()->text();
+        $car->title = $crawler->filter('.card__primary .card__title:not(.price)')->first()->text();
         $crawler->filter('a')->first()->each(function (Crawler $carCrawler) use ($car) {
             preg_match('/(https:\/\/.+)"/', $carCrawler->filter('.mdc-card__media')->first()->attr('style'), $style);
             $car->image = $style[1];
